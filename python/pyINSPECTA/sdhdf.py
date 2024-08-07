@@ -3,7 +3,6 @@
 """Core SDHDF module
 """
 
-import inspect
 import json
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -28,7 +27,7 @@ from pyINSPECTA.tables import SDHDFTable
 from pyINSPECTA.attributes import SDHDFAttribute
 
 
-def _get_sdhdf_version(filename: Path):
+def _get_sdhdf_version(filename: Path) -> Tuple[float | str]:
     """Get the SDHDF version of a file and return the path
        to the definition template
 
@@ -41,19 +40,20 @@ def _get_sdhdf_version(filename: Path):
     """
     with h5py.File(filename, "r") as f:
         hdr_keys = ["HDR_DEFN_VERSION", "HEADER_DEFINITION_VERSION"]
+        primary_header = SDHDFTable(f["metadata/primary_header"])
         version = None
         for hdr_key in hdr_keys:
-            if hdr_key in f["metadata/primary_header"].attrs:
-                version = f["metadata/primary_header"][hdr_key][0].decode()
+            if hdr_key in primary_header:
+                version = float(primary_header[hdr_key])
 
         if version is None:
             raise ValueError(f"SDHDF version not found in file '{filename}'")
-        elif version <= "2.0":
-            version = "2.0"
-        elif (version > "2.0") and (version <= "2.1"):
-            version = "2.1"
-        elif (version > "2.2") and (version <= "2.9"):
-            version = "2.9"
+        elif version <= 2.0:
+            version = 2.0
+        elif (version > 2.0) and (version <= 2.1):
+            version = 2.1
+        elif (version > 2.2) and (version <= 2.9):
+            version = 2.9
 
         try:
             definition_file = pkg_resources.resource_filename(
@@ -71,7 +71,6 @@ class MetaData:
 
     Args:
         filename (Path): Path to the SDHDF file
-        verbose (bool): Toggle verbosity of output from metadata load
 
     Attributes:
         beam_params (SDHDFTable): The beam parameters
@@ -89,12 +88,11 @@ class MetaData:
 
     """
     filename: Path
-    verbose: bool = False
 
     def __post_init__(self):
         version, definition_file = _get_sdhdf_version(self.filename)
-        print("\nSDHDF version: %s" % version)
-        print("Loading SDHDF definition template: %s" % definition_file)
+        logger.info(f"SDHDF version: {version}")
+        logger.debug(f"Loading SDHDF definition template: {definition_file}")
 
         # load the definition
         with open(definition_file, "r") as f:
@@ -103,98 +101,85 @@ class MetaData:
         # load the metadata
         with h5py.File(self.filename, "r") as f:
             all_keys = f.keys()
-            print(json.dumps(self.definition, indent=4))
+            logger.debug(json.dumps(self.definition, indent=4))
             # loop over the file keys
             for key in all_keys:
-                print("\n> Found SDHDF group '%s'..." % key)
+                logger.info(f"Found SDHDF group '{key}'...")
                 gp_key = key
                 if "beam" in key:
                     gp_key = "beam"
                 # check key is in definition
                 if gp_key in self.definition.keys():
                     if "beam" in gp_key:
-                        print(">> Loading metadata for beam '%s'..." % key)
+                        logger.info("Loading metadata for beam '%s'..." % key)
                         if self.definition[gp_key]:
                             for k in self.definition[gp_key].keys():
                                 if k == "attributes":
                                     attr = SDHDFAttribute(f[key])
                                     self.__setattr__(k, attr)
-                                    if self.verbose:
-                                        print(self.__getattribute__(k))
+                                    logger.debug(self.__getattribute__(k))
                                 if k == "band":
                                     # loop over the bands
                                     bands = list(filter(lambda element: 'band' in element, f[key].keys()))
                                     for band in bands:
-                                        print(">>> Loading metadata for beam '%s' band '%s'..." % (key, band))
+                                        logger.info(f"Loading metadata for beam '{key}' band '{band}'...")
                                         v = self.definition[gp_key][k]
-                                        if self.verbose: print("\nKEY: %s VALUE: %s" % (k, v))
+                                        logger.debug(f"KEY: {k} VALUE: {v}")
                                         if isinstance(v, dict):
                                             for kk in self.definition[gp_key][k].keys():
                                                 if kk == "attributes":
                                                     attr = SDHDFAttribute(f[key][band])
                                                     self.__setattr__(kk, attr)
-                                                    if self.verbose:
-                                                        print(self.__getattribute__(kk))
+                                                    logger.debug(self.__getattribute__(kk))
                                                 else:
                                                     vv = self.definition[gp_key][k][kk]
-                                                    if self.verbose: print("\nKEY: %s VALUE: %s" % (kk, vv))
+                                                    logger.debug("\nKEY: %s VALUE: %s" % (kk, vv))
                                                     if isinstance(vv, dict):
                                                         if kk in ["astronomy", "calibrator"]:
                                                             for kkk in self.definition[gp_key][k][kk].keys():
                                                                 if kkk == "attributes":
                                                                     attr = SDHDFAttribute(f[key][band][kk])
                                                                     self.__setattr__(kkk, attr)
-                                                                    if self.verbose:
-                                                                        print(self.__getattribute__(kkk))
+                                                                    logger.debug(self.__getattribute__(kkk))
                                                                 else:
                                                                     vvv = self.definition[gp_key][k][kk][kkk]
-                                                                    if self.verbose: print("\nKEY: %s VALUE: %s" % (kkk, vvv))
-                                                                    if self.verbose: print("Nothing to do here right now!")
+                                                                    logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
+                                                                    logger.debug("Nothing to do here right now!")
                                                         if kk in ["metadata"]:
                                                             for kkk in self.definition[gp_key][k][kk].keys():
                                                                 if kkk == "attributes":
                                                                     attr = SDHDFAttribute(f[key][band][kk])
                                                                     self.__setattr__(kkk, attr)
-                                                                    if self.verbose:
-                                                                        print(self.__getattribute__(kkk))
+                                                                    logger.debug(self.__getattribute__(kkk))
                                                                 else:
                                                                     vvv = self.definition[gp_key][k][kk][kkk]
-                                                                    if self.verbose: print("\nKEY: %s VALUE: %s" % (kkk, vvv))
+                                                                    logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
                                                                     if vvv in f[key][band].keys():
                                                                         tab = SDHDFTable(f[key][band][vvv])
-                                                                        if self.verbose: print(tab)
+                                                                        logger.debug(tab)
                                                                         self.__setattr__(kkk, tab)
                                                                     else:
-                                                                        logger.warning(
-                                                                            f"""No object '{key}/{band}/{vvv}' found in file!
-                                                                            """
-                                                                        )
+                                                                        logger.warning(f"No object '{key}/{band}/{vvv}' found in file!")
                     else:
-                        print(">> Loading metadata for '%s'..." % gp_key)
+                        logger.info(f"Loading metadata for '{gp_key}'...")
                         for k in self.definition[gp_key].keys():
                             if k == "attributes":
                                 attr = SDHDFAttribute(f[key])
                                 self.__setattr__(k, attr)
-                                if self.verbose:
-                                    print(self.__getattribute__(k))
+                                logger.debug(self.__getattribute__(k))
                             else:
                                 v = self.definition[gp_key][k]
-                                if self.verbose: print("\nKEY: %s VALUE: %s" % (k, v))
+                                logger.debug("\nKEY: %s VALUE: %s" % (k, v))
                                 if v in f:
                                     tab = SDHDFTable(f[v])
-                                    if self.verbose: print(tab)
+                                    logger.debug(tab)
                                     self.__setattr__(k, tab)
                                 else:
                                     logger.warning(
-                                        f"""No object '{v}' found in file!
-                                        """
+                                        f"No object '{v}' found in file!"
                                     )
                 else:
-                    logger.warning(
-                        f"""Key '{gp_key}' not found in definition file
-                        '{definition_file}'. Ignoring...
-                        """
-                    )
+                    logger.warning(f"Key '{gp_key}' not found in definition file '{definition_file}'. Ignoring...")
 
     def print_obs_metadata(self, format: str = "grid") -> None:
         """Print observation metadata to the terminal"""
@@ -205,7 +190,7 @@ class MetaData:
                 print(df.table.to_markdown(tablefmt=format, headers=[]))
             else:
                 logger.warning(
-                    f"""No metadata found for key '{key}'. Ignoring..."""
+                    f"No metadata found for key '{key}'. Ignoring..."
                 )
 
     def print_obs_config(self, format: str = "grid") -> None:
@@ -217,7 +202,7 @@ class MetaData:
                 print(df.table.to_markdown(tablefmt=format, headers=[]))
             else:
                 logger.warning(
-                    f"""No metadata found for key '{key}'. Ignoring..."""
+                    f"No metadata found for key '{key}'. Ignoring..."
                 )
 
     def write(self, filename: Union[str, Path], overwrite:bool=False) -> pd.DataFrame:
@@ -236,6 +221,51 @@ class MetaData:
                 df.to_hdf(filename, key=f"{val}", mode="a", data_columns=True)
 
         return history.generate_history_row()
+
+def get_data_dimensions(
+        dim_labels: str,
+        data_shape: Tuple[int],
+        meta: SDHDFTable,
+) -> List[str]:
+    if dim_labels != "NOT SET":
+        return dim_labels.split(",")
+
+    logger.warning("No dimension labels found in file! Using default labels.")
+    usual_dims = ["time", "polarization", "channel", "beam"]
+    dims = []
+    for i, shape in enumerate(data_shape):
+        if shape == len(meta):
+            dims.append("time")
+        else:
+            # dims.append(f"dim_{i}")
+            dims.append(usual_dims[i])
+    return dims
+
+
+def get_freq_dimensions(
+    dims: List[str],
+    freq_dim_labels: str,
+    data_shape: Tuple[int],
+    freq_shape: Tuple[int],
+) -> List[str]:
+
+    if freq_dim_labels != "NOT SET":
+        return freq_dim_labels.split(",")
+    
+    logger.warning("No frequency dimension labels found in file! Attempting to match dimensions to data shape...")
+    # Attempt to match the dimensions to the data shape
+    freq_dims = []
+    for i_shape in freq_shape:
+        for i in range(len(data_shape)):
+            if i_shape == data_shape[i]:
+                freq_dims.append(dims[i])
+                break
+
+    if len(freq_dims) == len(freq_shape):
+        return freq_dims
+    
+    logger.warning("Could not automatically match frequency dimensions to data dimensions! Using default labels.")
+    return [f"freq_{i}" for i in range(len(freq_shape))]
 
 
 @dataclass
@@ -310,13 +340,8 @@ class SubBand:
                             flag_reshape = np.expand_dims(flag_reshape, axis=i)
                 flags = flag_reshape
             else:
-                logger.warning(
-                    f"""
-                    No flags found for sub-band '{self.label}' in file '{self.filename}'!
-                    SDHDF version is {self.definition['version']}.
-                    Flags will be set to all zeros.
-                    """
-                )
+                logger.warning(f"No flags found for sub-band '{self.label}' in file '{self.filename}'!")
+                logger.warning(f"Band '{self.label}' flags will be set to all zeros.")
                 flags = np.zeros_like(data)
 
             # Load into memory if requested
@@ -328,26 +353,42 @@ class SubBand:
 
             # Process into xarray
             coords = {col: ("time", meta[col].values) for col in meta.table.columns}
-            coords["frequency"] = Variable(
-                dims="frequency",
-                data=freqs,
-                attrs={"units": h5[freq_path].attrs["UNIT"]}
-            )
-            dims = h5[data_path].attrs["DIMENSION_LABELS"]
 
-            # Need to isel beam 0 here - it will always be dimension 0
+            dims = get_data_dimensions(
+                dim_labels=h5[data_path].attrs["DIMENSION_LABELS"].decode(),
+                data_shape=data.shape,
+                meta=meta,
+            )
+
+            freq_dims = get_freq_dimensions(
+                dims=dims,
+                freq_dim_labels=h5[freq_path].attrs["DIMENSION_LABELS"].decode(),
+                data_shape=data.shape,
+                freq_shape=freqs.shape,
+            )
+            coords["frequency"] = Variable(
+                dims=freq_dims,
+                data=freqs,
+                attrs={"units": h5[freq_path].attrs["UNIT"].decode()},
+            )
+
+            attrs = dict(h5[data_path].attrs)
+            for key, val in attrs.items():
+                if isinstance(val, bytes):
+                    attrs[key] = val.decode()
+
             data_xr = DataArray(
                 data,
                 dims=dims,
                 coords=coords,
                 name=f"{self.label}_data",
-                attrs=dict(h5[data_path].attrs),
+                attrs=attrs,
             )
             # Check if data has beam dimension
             if "beam" in data_xr.dims:
                 data_xr = data_xr.isel(beam=0)
             data_xr.attrs["units"] = data_xr.UNIT
-            self.attrs = dict(h5[data_path].attrs)
+            self.attrs = attrs
 
             flag_xr = DataArray(
                 flags,
@@ -372,7 +413,7 @@ class SubBand:
     def plot_waterfall(
         self,
         polarization: int = 0,
-        bin: int = 0,
+        # bin: int = 0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -383,10 +424,10 @@ class SubBand:
             bin (int, optional): Bin to select. Defaults to 0.
             flag (bool, optional): Blank flagged data. Defaults to False.
         """
-        sub_data = self.astronomy_dataset.isel(polarization=polarization, bin=bin)
+        sub_data = self.astronomy_dataset.isel(polarization=polarization,)
         if flag:
             sub_data = sub_data.where(sub_data.flag == 0)
-        sub_data.data.plot(**plot_kwargs)
+        sub_data.data.plot(x="frequency", **plot_kwargs)
         ax = plt.gca()
         return ax
 
@@ -399,7 +440,7 @@ class SubBand:
         **plot_kwargs,
     ):
         sub_data = self.astronomy_dataset.isel(
-            time=time, polarization=polarization, bin=bin
+            time=time, polarization=polarization,
         )
         if flag:
             sub_data = sub_data.where(sub_data.flag == 0)
@@ -414,13 +455,13 @@ class SubBand:
         )
         # Set chunks for parallel processing
         chunks = {d: 1 for d in data_xr_flg.dims}
-        chunks["frequency"] = len(self.astronomy_dataset.data.frequency)
+        chunks["channel"] = len(self.astronomy_dataset.data.channel)
         data_xr_flg = data_xr_flg.chunk(chunks)
         mask = xr.apply_ufunc(
             flagging.box_filter,
             data_xr_flg,
-            input_core_dims=[["frequency"]],
-            output_core_dims=[["frequency"]],
+            input_core_dims=[["channel"]],
+            output_core_dims=[["channel"]],
             kwargs={"sigma": sigma, "n_windows": n_windows},
             dask="parallelized",
             vectorize=True,
@@ -628,7 +669,7 @@ class Beam:
 
         ax = subband.plot_waterfall(
             polarization=polarization,
-            bin=bin,
+            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -639,7 +680,7 @@ class Beam:
         subband: Union[int, str],
         time: int = 0,
         polarization: int = 0,
-        bin=0,
+        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -651,7 +692,7 @@ class Beam:
         ax = subband.plot_spectrum(
             time=time,
             polarization=polarization,
-            bin=bin,
+            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -661,7 +702,7 @@ class Beam:
         self,
         time: int = 0,
         polarization: int = 0,
-        bin=0,
+        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -670,7 +711,7 @@ class Beam:
             sb.plot_spectrum(
                 time=time,
                 polarization=polarization,
-                bin=bin,
+                # bin=bin,
                 flag=flag,
                 ax=ax,
                 label=sb.label,
@@ -756,13 +797,12 @@ class SDHDF:
     filename: Path
     in_memory: bool = False
     parallel: bool = False
-    verbose: bool = False
 
     def __post_init__(self):
         self.client = Client() if self.parallel else None
         if self.parallel:
             logger.info(f"Dask dashboard at: {self.client.dashboard_link}")
-        self.metadata = MetaData(self.filename, self.verbose)
+        self.metadata = MetaData(self.filename)
         self.definition = self.metadata.definition
         with h5py.File(self.filename, "r") as f:
             keys = list(f.keys())
@@ -786,7 +826,7 @@ class SDHDF:
         beam: Union[int, str],
         subband: Union[int, str],
         polarization: int = 0,
-        bin=0,
+        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -806,7 +846,7 @@ class SDHDF:
         ax = beam.plot_waterfall(
             subband=subband,
             polarization=polarization,
-            bin=bin,
+            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -818,7 +858,7 @@ class SDHDF:
         subband: Union[int, str],
         time: int = 0,
         polarization: int = 0,
-        bin=0,
+        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -831,7 +871,7 @@ class SDHDF:
             subband=subband,
             time=time,
             polarization=polarization,
-            bin=bin,
+            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -842,7 +882,7 @@ class SDHDF:
         beam: Union[int, str],
         time: int = 0,
         polarization: int = 0,
-        bin=0,
+        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -854,7 +894,7 @@ class SDHDF:
         ax = beam.plot_wide(
             time=time,
             polarization=polarization,
-            bin=bin,
+            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -874,6 +914,7 @@ class SDHDF:
         """Flag persistent RFI in all subbands."""
         telescope = self.metadata.primary_header["TELESCOPE"][0]
         rfi = flagging.get_persistent_rfi(telescope=telescope)
+        from IPython import embed; embed()
         for i, x in tqdm(
             rfi.iterrows(), desc="Flagging persistent RFI", total=len(rfi)
         ):

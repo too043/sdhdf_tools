@@ -6,7 +6,7 @@ import logging
 
 # Create logger
 logger = logging.getLogger('pyINSPECTA')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # Create console handler and set level to debug
 ch = logging.StreamHandler()

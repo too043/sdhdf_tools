@@ -116,10 +116,25 @@ class MetaData:
                 self._get_metadata(def_values, base_path, h5file)
 
     def _get_metadata(self, def_values: dict, base_path: str, h5file: h5py.File) -> None:
+        """Set the metadata attributes from the definition
+
+        Args:
+            def_values (dict): Definition values
+            base_path (str): Base path in the h5file
+            h5file (h5py.File): h5py file object
+        """        
         for key, val in def_values.items():
             self._set_attributes(key, val, base_path, h5file)
 
     def _set_attributes(self, key: str, val: str | dict, base_path: str, h5file: h5py.File) -> None:
+        """Recursively set the metadata attributes
+
+        Args:
+            key (str): The key in the definition
+            val (str | dict): The value in the definition
+            base_path (str): Base path in the h5file
+            h5file (h5py.File): h5py file object
+        """        
         if key == "attributes":
             return
         elif isinstance(val, dict):

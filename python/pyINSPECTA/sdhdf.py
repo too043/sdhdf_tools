@@ -99,88 +99,121 @@ class MetaData:
         with open(definition_file, "r") as f:
             self.definition = json.load(f)
 
-        # load the metadata
         with h5py.File(self.filename, "r") as f:
-            all_keys = f.keys()
-            logger.debug(json.dumps(self.definition, indent=4))
-            # loop over the file keys
-            for key in all_keys:
-                logger.info(f"Found SDHDF group '{key}'...")
-                gp_key = key
-                if "beam" in key:
-                    gp_key = "beam"
-                # check key is in definition
-                if gp_key in self.definition.keys():
-                    if "beam" in gp_key:
-                        logger.info("Loading metadata for beam '%s'..." % key)
-                        if self.definition[gp_key]:
-                            for k in self.definition[gp_key].keys():
-                                if k == "attributes":
-                                    attr = SDHDFAttribute(f[key])
-                                    self.__setattr__(k, attr)
-                                    logger.debug(self.__getattribute__(k))
-                                if k == "band":
-                                    # loop over the bands
-                                    bands = list(filter(lambda element: 'band' in element, f[key].keys()))
-                                    for band in bands:
-                                        logger.info(f"Loading metadata for beam '{key}' band '{band}'...")
-                                        v = self.definition[gp_key][k]
-                                        logger.debug(f"KEY: {k} VALUE: {v}")
-                                        if isinstance(v, dict):
-                                            for kk in self.definition[gp_key][k].keys():
-                                                if kk == "attributes":
-                                                    attr = SDHDFAttribute(f[key][band])
-                                                    self.__setattr__(kk, attr)
-                                                    logger.debug(self.__getattribute__(kk))
-                                                else:
-                                                    vv = self.definition[gp_key][k][kk]
-                                                    logger.debug("\nKEY: %s VALUE: %s" % (kk, vv))
-                                                    if isinstance(vv, dict):
-                                                        if kk in ["astronomy", "calibrator"]:
-                                                            for kkk in self.definition[gp_key][k][kk].keys():
-                                                                if kkk == "attributes":
-                                                                    attr = SDHDFAttribute(f[key][band][kk])
-                                                                    self.__setattr__(kkk, attr)
-                                                                    logger.debug(self.__getattribute__(kkk))
-                                                                else:
-                                                                    vvv = self.definition[gp_key][k][kk][kkk]
-                                                                    logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
-                                                                    logger.debug("Nothing to do here right now!")
-                                                        if kk in ["metadata"]:
-                                                            for kkk in self.definition[gp_key][k][kk].keys():
-                                                                if kkk == "attributes":
-                                                                    attr = SDHDFAttribute(f[key][band][kk])
-                                                                    self.__setattr__(kkk, attr)
-                                                                    logger.debug(self.__getattribute__(kkk))
-                                                                else:
-                                                                    vvv = self.definition[gp_key][k][kk][kkk]
-                                                                    logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
-                                                                    if vvv in f[key][band].keys():
-                                                                        tab = SDHDFTable(f[key][band][vvv])
-                                                                        logger.debug(tab)
-                                                                        self.__setattr__(kkk, tab)
-                                                                    else:
-                                                                        logger.warning(f"No object '{key}/{band}/{vvv}' found in file!")
+            self._load_metadata(h5file=f)
+
+        exit()
+
+    def _load_metadata(self, h5file: h5py.File) -> None:
+        # load the metadata
+        top_groups = h5file.keys()
+        logger.debug(json.dumps(self.definition, indent=4))
+        # loop over the file keys
+        for group in top_groups:
+            self._load_group(h5file, group)
+
+    def _load_group(self, h5file: h5py.File, group: str) -> None:
+        logger.info(f"Found SDHDF group '{group}'...")
+        group_key = "beam" if "beam" in group else group
+        # check key is in definition
+        if group_key not in self.definition.keys():
+            logger.warning(f"Key '{group_key}' not found in definition file '{self.definition_file}'. Ignoring...")
+            return
+
+        if group_key == "beam":
+            return self._load_beam(h5file, group)
+
+        return self._load_config_or_metadata(h5file, group)
+
+    def _load_beam(self, h5file: h5py.File, group: str) -> None:
+        group_key = "beam"
+        logger.info(f"Loading metadata for beam '{group}'...")
+        if not self.definition[group_key]:
+            logger.warning(f"No definition found for '{group}' in definition file '{self.definition_file}'. Ignoring...")
+            return
+
+        for def_group, def_val in self.definition[group_key].keys():
+            self._process_group_keys(
+                def_group=def_group, def_val=def_val, group=group, h5file=h5file
+            )
+
+    def _load_config_or_metadata(
+        self, h5file: h5py.File, 
+        group: str, 
+    ) -> None:
+        logger.info(f"Loading metadata for '{group}'...")
+        for def_group, def_val in self.definition[group].items():
+            self._process_group_keys(
+                def_group=def_group,
+                def_val=def_val,
+                group=group, 
+                h5file=h5file
+            )
+
+    def _process_bands():
+        # loop over the bands
+        bands = list(filter(lambda element: 'band' in element, h5file[group].keys()))
+        for band in bands:
+            logger.info(f"Loading metadata for beam '{group}' band '{band}'...")
+            v = self.definition[group_key][k]
+            logger.debug(f"KEY: {k} VALUE: {v}")
+            if isinstance(v, dict):
+                for kk in self.definition[group_key][k].keys():
+                    if kk == "attributes":
+                        attr = SDHDFAttribute(h5file[group][band])
+                        self.__setattr__(kk, attr)
+                        logger.debug(self.__getattribute__(kk))
                     else:
-                        logger.info(f"Loading metadata for '{gp_key}'...")
-                        for k in self.definition[gp_key].keys():
-                            if k == "attributes":
-                                attr = SDHDFAttribute(f[key])
-                                self.__setattr__(k, attr)
-                                logger.debug(self.__getattribute__(k))
-                            else:
-                                v = self.definition[gp_key][k]
-                                logger.debug("\nKEY: %s VALUE: %s" % (k, v))
-                                if v in f:
-                                    tab = SDHDFTable(f[v])
-                                    logger.debug(tab)
-                                    self.__setattr__(k, tab)
-                                else:
-                                    logger.warning(
-                                        f"No object '{v}' found in file!"
-                                    )
-                else:
-                    logger.warning(f"Key '{gp_key}' not found in definition file '{definition_file}'. Ignoring...")
+                        vv = self.definition[group_key][k][kk]
+                        logger.debug("\nKEY: %s VALUE: %s" % (kk, vv))
+                        if isinstance(vv, dict):
+                            if kk in ["astronomy", "calibrator"]:
+                                for kkk in self.definition[group_key][k][kk].keys():
+                                    if kkk == "attributes":
+                                        attr = SDHDFAttribute(h5file[group][band][kk])
+                                        self.__setattr__(kkk, attr)
+                                        logger.debug(self.__getattribute__(kkk))
+                                    else:
+                                        vvv = self.definition[group_key][k][kk][kkk]
+                                        logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
+                                        logger.debug("Nothing to do here right now!")
+                            if kk in ["metadata"]:
+                                for kkk in self.definition[group_key][k][kk].keys():
+                                    if kkk == "attributes":
+                                        attr = SDHDFAttribute(h5file[group][band][kk])
+                                        self.__setattr__(kkk, attr)
+                                        logger.debug(self.__getattribute__(kkk))
+                                    else:
+                                        vvv = self.definition[group_key][k][kk][kkk]
+                                        logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
+                                        if vvv in h5file[group][band].keys():
+                                            tab = SDHDFTable(h5file[group][band][vvv])
+                                            logger.debug(tab)
+                                            self.__setattr__(kkk, tab)
+                                        else:
+                                            logger.warning(f"No object '{group}/{band}/{vvv}' found in file!")
+
+    def _process_group_keys(
+        self, def_group: str, def_val: Any, group: str, h5file: h5py.File
+    ):
+        if def_group == "attributes":
+            return self._set_attributes(h5file=h5file, h5_path=group, name=def_group)
+
+        if def_group == "band":
+            return self._process_bands()
+
+        # Now def_val is the path into the hdf5 file
+        logger.debug(f"KEY: {def_group} VALUE: {def_val}")
+        if def_val not in h5file:
+            logger.warning(f"Path '{def_val}' not found in file!")
+            return
+
+        self._set_attributes(h5file=h5file, h5_path=def_val, name=def_group)
+
+    def _set_attributes(self, h5file: h5py.File, h5_path: str, name: str) -> None:
+        attr = SDHDFAttribute(h5file[h5_path])
+        setattr(self, name, attr)
+        logger.debug(getattr(self, name))
 
     def print_obs_metadata(self, format: str = "grid") -> None:
         """Print observation metadata to the terminal"""

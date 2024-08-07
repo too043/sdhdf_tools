@@ -365,8 +365,8 @@ class SubBand:
             self.metadata = meta
 
             # Get the flags (if they exist)
-            flag_path = f"{sb_path}/{astro_def['flags']}"
-            if "flags" in astro_def.keys() and flag_path is True:
+            if "flags" in astro_def.keys() and astro_def["flags"] and f"{sb_path}/{astro_def['flags']}" in h5:
+                flag_path = f"{sb_path}/{astro_def['flags']}"
                 flags = h5[flag_path][:]
                 # Ensure flag has same shape as data
                 flag_reshape = flags[:].copy()
@@ -394,22 +394,43 @@ class SubBand:
             # Process into xarray
             coords = {col: ("time", meta[col].values) for col in meta.table.columns}
 
+            dim_labels = h5[data_path].attrs["DIMENSION_LABELS"]
+            if isinstance(dim_labels, bytes):
+                dim_labels = dim_labels.decode()
+            elif isinstance(dim_labels, np.ndarray):
+                dim_labels = dim_labels.astype(str)
+
             dims = self._get_data_dimensions(
-                dim_labels=h5[data_path].attrs["DIMENSION_LABELS"].decode(),
+                dim_labels=dim_labels,
                 data_shape=data.shape,
                 meta=meta,
             )
 
+            if "DIMENSION_LABELS" in h5[freq_path].attrs:
+                freq_dim_labels = h5[freq_path].attrs["DIMENSION_LABELS"]
+            else:
+                freq_dim_labels = "NOT SET"
+            if isinstance(freq_dim_labels, bytes):
+                freq_dim_labels = freq_dim_labels.decode()
+            elif isinstance(freq_dim_labels, np.ndarray):
+                freq_dim_labels = freq_dim_labels.astype(str)
+
             freq_dims = self._get_freq_dimensions(
                 dims=dims,
-                freq_dim_labels=h5[freq_path].attrs["DIMENSION_LABELS"].decode(),
+                freq_dim_labels=freq_dim_labels,
                 data_shape=data.shape,
                 freq_shape=freqs.shape,
             )
+            if "UNIT" in h5[freq_path].attrs:
+                freq_unit = h5[freq_path].attrs["UNIT"]
+                if isinstance(h5[freq_path].attrs["UNIT"], bytes):
+                    freq_unit = freq_unit.decode()
+            else:
+                freq_unit = "NOT SET"
             coords["frequency"] = Variable(
                 dims=freq_dims,
                 data=freqs,
-                attrs={"units": h5[freq_path].attrs["UNIT"].decode()},
+                attrs={"units": freq_unit},
             )
 
             attrs = dict(h5[data_path].attrs)
@@ -435,7 +456,7 @@ class SubBand:
                 dims=dims,
                 coords=coords,
                 name=f"{self.label}_flag",
-            )
+            ).squeeze()
             # Same as above
             if "beam" in flag_xr.dims:
                 flag_xr = flag_xr.isel(beam=0)
@@ -445,7 +466,8 @@ class SubBand:
                     "data": data_xr,
                     "flag": flag_xr,
                     "metadata": xr.DataArray(meta.table, dims=["time", "meta"])
-                }
+
+                },
             )
 
             return astronomy_dataset

@@ -97,169 +97,53 @@ class MetaData:
 
         # load the definition
         with open(definition_file, "r") as f:
-            self.definition = json.load(f)
+            definition = dict(json.load(f))
 
-        with h5py.File(self.filename, "r") as f:
-            self._load_metadata(h5file=f)
+        self.definition = definition
 
-        exit()
+        with h5py.File(self.filename, "r") as h5file:
+            h5file.visititems(lambda name, obj: logger.debug(f"Name: {name} Object: {obj}"))
+            for top_group in h5file.keys():
+                # def_group = "beam" if "beam" in top_group else top_group
+                is_beam = "beam" in top_group
 
-    def _load_metadata(self, h5file: h5py.File) -> None:
-        """Load the SDHDF metadata from the file
+                base_path = f"/{top_group}" if is_beam else ""
+                def_values = definition.get(top_group, None) if not is_beam else definition.get("beam", None)
 
-        Args:
-            h5file (h5py.File): HDF5 file stream
-        """        
-        # load the metadata
-        top_groups = h5file.keys()
-        logger.debug(json.dumps(self.definition, indent=4))
-        # loop over the file keys
-        for group in top_groups:
-            self._load_group(h5file, group)
+                if def_values is None:
+                    logger.warning(f"No definition found for group '{top_group}'. Ignoring...")
+                    continue
+                self._get_metadata(def_values, base_path, h5file)
 
-    def _load_group(self, h5file: h5py.File, group: str) -> None:
-        """Load a group of metadata from the file
+    def _get_metadata(self, def_values: dict, base_path: str, h5file: h5py.File) -> None:
+        for key, val in def_values.items():
+            self._set_attributes(key, val, base_path, h5file)
 
-        Args:
-            h5file (h5py.File): HDF5 file stream
-            group (str): Top-level group
-
-        """        
-        logger.info(f"Found SDHDF group '{group}'...")
-        group_key = "beam" if "beam" in group else group
-        # check key is in definition
-        if group_key not in self.definition.keys():
-            logger.warning(f"Key '{group_key}' not found in definition file '{self.definition_file}'. Ignoring...")
+    def _set_attributes(self, key: str, val: str | dict, base_path: str, h5file: h5py.File) -> None:
+        if key == "attributes":
             return
-
-        if group_key == "beam":
-            return self._load_beam(h5file, group)
-
-        self._load_config_or_metadata(h5file, group)
-
-    def _load_beam(self, h5file: h5py.File, group: str) -> None:
-        """Load the beam metadata from the file
-
-        Args:
-            h5file (h5py.File): HDF5 file stream
-            group (str): Beam group name
-        """        
-        group_key = "beam"
-        logger.info(f"Loading metadata for beam '{group}'...")
-        if not self.definition[group_key]:
-            logger.warning(f"No definition found for '{group}' in definition file '{self.definition_file}'. Ignoring...")
-            return
-
-        for def_group, def_val in self.definition[group_key].keys():
-            self._process_group_keys(
-                def_group=def_group, def_val=def_val, group=group, h5file=h5file
-            )
-
-    def _load_config_or_metadata(
-        self, h5file: h5py.File, 
-        group: str, 
-    ) -> None:
-        """Load the configuration or metadata from the file
-
-        Args:
-            h5file (h5py.File): HDF5 file stream
-            group (str): Configuration or metadata group name
-        """        
-        logger.info(f"Loading metadata for '{group}'...")
-        for def_group, def_val in self.definition[group].items():
-            self._process_group_keys(
-                def_group=def_group,
-                def_val=def_val,
-                group=group, 
-                h5file=h5file
-            )
-
-    def _process_bands(self, h5file: h5py.File, def_group: str, def_val: str | dict, group: str) -> None:
-        # loop over the bands
-        bands = list(filter(lambda element: 'band' in element, h5file[group].keys()))
-        for band in bands:
-            logger.info(f"Loading metadata for beam '{group}' band '{band}'...")
-            logger.debug(f"KEY: {def_group} VALUE: {def_val}")
-            if isinstance(def_val, dict):
-                for kk in def_val.keys():
-                    if kk == "attributes":
-                        attr = SDHDFAttribute(h5file[group][band])
-                        self.__setattr__(kk, attr)
-                        logger.debug(self.__getattribute__(kk))
-                    else:
-                        vv = def_val[kk]
-                        logger.debug("\nKEY: %s VALUE: %s" % (kk, vv))
-                        if isinstance(vv, dict):
-                            if kk in ["astronomy", "calibrator"]:
-                                for kkk in def_val[kk].keys():
-                                    if kkk == "attributes":
-                                        attr = SDHDFAttribute(h5file[group][band][kk])
-                                        self.__setattr__(kkk, attr)
-                                        logger.debug(self.__getattribute__(kkk))
-                                    else:
-                                        vvv = def_val[kk][kkk]
-                                        logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
-                                        logger.debug("Nothing to do here right now!")
-                            if kk in ["metadata"]:
-                                for kkk in def_val[kk].keys():
-                                    if kkk == "attributes":
-                                        attr = SDHDFAttribute(h5file[group][band][kk])
-                                        self.__setattr__(kkk, attr)
-                                        logger.debug(self.__getattribute__(kkk))
-                                    else:
-                                        vvv = def_val[kk][kkk]
-                                        logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
-                                        if vvv in h5file[group][band].keys():
-                                            tab = SDHDFTable(h5file[group][band][vvv])
-                                            logger.debug(tab)
-                                            self.__setattr__(kkk, tab)
-                                        else:
-                                            logger.warning(f"No object '{group}/{band}/{vvv}' found in file!")
-
-    def _process_group_keys(
-        self, def_group: str, def_val: str | dict, group: str, h5file: h5py.File
-    ) -> None:
-        """Process group of SDHDF keys - sets metadata
-
-        Args:
-            def_group (str): Definition file group name
-            def_val (str | dict): Definition file group contents
-            group (str): Top level group
-            h5file (h5py.File): HDF5 file stream
-
-        """
-        if def_group == "attributes":
-            return self._set_attributes(h5file=h5file, h5_path=group, name=def_group)
-
-        if def_group == "band":
-            return self._process_bands()
-
-        # Now def_val is the path into the hdf5 file
-        logger.debug(f"KEY: {def_group} VALUE: {def_val}")
-        if def_val not in h5file:
-            logger.warning(f"Path '{def_val}' not found in file!")
-            return
-
-        self._set_attributes(h5file=h5file, h5_path=def_val, name=def_group)
-
-    def _set_attributes(self, h5file: h5py.File, h5_path: str, name: str) -> None:
-        """Set the attributes from the SDHDF file
-
-        Args:
-            h5file (h5py.File): HDF5 file stream
-            h5_path (str): Path to the attribute in the file
-            name (str): Name of the attribute
-        """        
-        attr = SDHDFAttribute(h5file[h5_path])
-        setattr(self, name, attr)
-        logger.debug(getattr(self, name))
+        elif isinstance(val, dict):
+            if key == "band":
+                band_paths = [k for k in h5file[base_path].keys() if "band" in k]
+                for band_path in band_paths:
+                    self._get_metadata(val, base_path=f"{base_path}/{band_path}", h5file=h5file)
+            else:
+                self._get_metadata(val, base_path=base_path, h5file=h5file)
+        else:
+            path = f"{base_path}/{val}"
+            logger.debug(f"Path: {path}")
+            if path not in h5file:
+                logger.warning(f"Path '{path}' not found in file")
+                return
+            attr = SDHDFAttribute(h5file[path])
+            return setattr(self, key, attr)
 
     def print_obs_metadata(self, format: str = "grid") -> None:
         """Print observation metadata to the terminal"""
         for key in self.definition["metadata"].keys():
             if key in self.__dict__:
                 df = self.__dict__[key]
-                logger.info(f"{key}:")
+                print(f"{key}:")
                 print(df.table.to_markdown(tablefmt=format, headers=[]))
             else:
                 logger.warning(
@@ -271,7 +155,7 @@ class MetaData:
         for key in self.definition["config"].keys():
             if key in self.__dict__:
                 df = self.__dict__[key]
-                logger.info(f"{key}:")
+                print(f"{key}:")
                 print(df.table.to_markdown(tablefmt=format, headers=[]))
             else:
                 logger.warning(
@@ -298,7 +182,7 @@ class MetaData:
 
 
 @dataclass
-class SubBand:
+class SubBand:    
     """An SDHDF sub-band data object
 
     Args:
@@ -1001,10 +885,10 @@ class SDHDF:
         )
         return ax
 
-    def print_obs_metadata(self, format: str = "grid"):
+    def print_obs_metadata(self, format: str = "fancy_outline"):
         self.metadata.print_obs_metadata(format=format)
 
-    def print_obs_config(self, format: str = "grid"):
+    def print_obs_config(self, format: str = "fancy_outline"):
         self.metadata.print_obs_config(format=format)
 
     #def print_attributes(self):

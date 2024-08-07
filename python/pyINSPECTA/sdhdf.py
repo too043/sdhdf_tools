@@ -88,52 +88,99 @@ class MetaData:
         write: Write metadata to file [NOT YET IMPLEMENTED]
 
     """
-
     filename: Path
 
     def __post_init__(self):
-        version, definition_file_path = _get_sdhdf_version(self.filename)
+        version, definition_file = _get_sdhdf_version(self.filename)
         logger.info(f"SDHDF version: {version}")
-        logger.debug(f"Loading SDHDF definition template: {definition_file_path}")
+        logger.debug(f"Loading SDHDF definition template: {definition_file}")
 
         # load the definition
-        with open(definition_file_path, "r") as definition_file:
-            self.definition = json.load(definition_file)
+        with open(definition_file, "r") as f:
+            self.definition = json.load(f)
 
         # load the metadata
-        with h5py.File(self.filename, "r") as file:
+        with h5py.File(self.filename, "r") as f:
+            all_keys = f.keys()
             logger.debug(json.dumps(self.definition, indent=4))
-            for key in file.keys():
+            # loop over the file keys
+            for key in all_keys:
                 logger.info(f"Found SDHDF group '{key}'...")
-                group_key = "beam" if "beam" in key else key
-                if group_key in self.definition:
-                    logger.info(f"Loading metadata for '{group_key}'...")
-                    self.load_metadata(file, self.definition[group_key], key)
+                gp_key = key
+                if "beam" in key:
+                    gp_key = "beam"
+                # check key is in definition
+                if gp_key in self.definition.keys():
+                    if "beam" in gp_key:
+                        logger.info("Loading metadata for beam '%s'..." % key)
+                        if self.definition[gp_key]:
+                            for k in self.definition[gp_key].keys():
+                                if k == "attributes":
+                                    attr = SDHDFAttribute(f[key])
+                                    self.__setattr__(k, attr)
+                                    logger.debug(self.__getattribute__(k))
+                                if k == "band":
+                                    # loop over the bands
+                                    bands = list(filter(lambda element: 'band' in element, f[key].keys()))
+                                    for band in bands:
+                                        logger.info(f"Loading metadata for beam '{key}' band '{band}'...")
+                                        v = self.definition[gp_key][k]
+                                        logger.debug(f"KEY: {k} VALUE: {v}")
+                                        if isinstance(v, dict):
+                                            for kk in self.definition[gp_key][k].keys():
+                                                if kk == "attributes":
+                                                    attr = SDHDFAttribute(f[key][band])
+                                                    self.__setattr__(kk, attr)
+                                                    logger.debug(self.__getattribute__(kk))
+                                                else:
+                                                    vv = self.definition[gp_key][k][kk]
+                                                    logger.debug("\nKEY: %s VALUE: %s" % (kk, vv))
+                                                    if isinstance(vv, dict):
+                                                        if kk in ["astronomy", "calibrator"]:
+                                                            for kkk in self.definition[gp_key][k][kk].keys():
+                                                                if kkk == "attributes":
+                                                                    attr = SDHDFAttribute(f[key][band][kk])
+                                                                    self.__setattr__(kkk, attr)
+                                                                    logger.debug(self.__getattribute__(kkk))
+                                                                else:
+                                                                    vvv = self.definition[gp_key][k][kk][kkk]
+                                                                    logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
+                                                                    logger.debug("Nothing to do here right now!")
+                                                        if kk in ["metadata"]:
+                                                            for kkk in self.definition[gp_key][k][kk].keys():
+                                                                if kkk == "attributes":
+                                                                    attr = SDHDFAttribute(f[key][band][kk])
+                                                                    self.__setattr__(kkk, attr)
+                                                                    logger.debug(self.__getattribute__(kkk))
+                                                                else:
+                                                                    vvv = self.definition[gp_key][k][kk][kkk]
+                                                                    logger.debug("\nKEY: %s VALUE: %s" % (kkk, vvv))
+                                                                    if vvv in f[key][band].keys():
+                                                                        tab = SDHDFTable(f[key][band][vvv])
+                                                                        logger.debug(tab)
+                                                                        self.__setattr__(kkk, tab)
+                                                                    else:
+                                                                        logger.warning(f"No object '{key}/{band}/{vvv}' found in file!")
+                    else:
+                        logger.info(f"Loading metadata for '{gp_key}'...")
+                        for k in self.definition[gp_key].keys():
+                            if k == "attributes":
+                                attr = SDHDFAttribute(f[key])
+                                self.__setattr__(k, attr)
+                                logger.debug(self.__getattribute__(k))
+                            else:
+                                v = self.definition[gp_key][k]
+                                logger.debug("\nKEY: %s VALUE: %s" % (k, v))
+                                if v in f:
+                                    tab = SDHDFTable(f[v])
+                                    logger.debug(tab)
+                                    self.__setattr__(k, tab)
+                                else:
+                                    logger.warning(
+                                        f"No object '{v}' found in file!"
+                                    )
                 else:
-                    logger.warning(
-                        f"Key '{group_key}' not found in definition file '{definition_file_path}'. Ignoring..."
-                    )
-
-    def load_metadata(self, f, definition, path=""):
-        for k, v in definition.items():
-            current_path = f"{path}/{k}" if path else k
-            if k == "attributes":
-                attr = SDHDFAttribute(f[path])
-                setattr(self, k, attr)
-                logger.debug(getattr(self, k))
-            elif k == "band":
-                bands = list(filter(lambda element: "band" in element, f[path].keys()))
-                for band in bands:
-                    logger.info(f"Loading metadata for beam '{path}' band '{band}'...")
-                    self.load_metadata(f, v, f"{path}/{band}")
-            elif isinstance(v, dict):
-                self.load_metadata(f, v, current_path)
-            elif v in f:
-                tab = SDHDFTable(f[v])
-                logger.debug(tab)
-                setattr(self, k, tab)
-            else:
-                logger.warning(f"No object '{current_path}' found in file!")
+                    logger.warning(f"Key '{gp_key}' not found in definition file '{definition_file}'. Ignoring...")
 
     def print_obs_metadata(self, format: str = "grid") -> None:
         """Print observation metadata to the terminal"""

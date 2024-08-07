@@ -241,18 +241,21 @@ class SubBand:
         dim_labels: str,
         data_shape: tuple[int],
         meta: SDHDFTable,
-    ) -> list[str]:
+    ) -> list[str] | np.ndarray:
+        if isinstance(dim_labels, np.ndarray):
+            return dim_labels
+        if isinstance(dim_labels, bytes):
+            dim_labels = dim_labels.decode()
         if dim_labels != "NOT SET":
             return dim_labels.split(",")
 
         logger.warning("No dimension labels found in file! Using default labels.")
-        usual_dims = ["time", "polarization", "channel", "beam"]
+        usual_dims = ["time", "polarization", "channel", "bin"]
         dims = []
         for i, shape in enumerate(data_shape):
             if shape == len(meta):
                 dims.append("time")
             else:
-                # dims.append(f"dim_{i}")
                 dims.append(usual_dims[i])
         return dims
 
@@ -262,8 +265,12 @@ class SubBand:
         freq_dim_labels: str,
         data_shape: tuple[int],
         freq_shape: tuple[int],
-    ) -> list[str]:
+    ) -> list[str] | np.ndarray:
 
+        if isinstance(freq_dim_labels, np.ndarray):
+            return freq_dim_labels
+        if isinstance(freq_dim_labels, bytes):
+            freq_dim_labels = freq_dim_labels.decode()
         if freq_dim_labels != "NOT SET":
             return freq_dim_labels.split(",")
 
@@ -369,7 +376,7 @@ class SubBand:
                 dims=freq_dims,
                 data=freqs,
                 attrs={"units": freq_unit},
-            )
+            ).squeeze()
 
             attrs = dict(h5[data_path].attrs)
             for key, val in attrs.items():

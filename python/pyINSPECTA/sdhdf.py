@@ -420,7 +420,6 @@ class SubBand:
     def plot_waterfall(
         self,
         polarization: int = 0,
-        # bin: int = 0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -440,9 +439,8 @@ class SubBand:
 
     def plot_spectrum(
         self,
-        time,
+        time: int,
         polarization: int = 0,
-        bin: int = 0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -665,7 +663,6 @@ class Beam:
         self,
         subband: int | str,
         polarization: int = 0,
-        bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -676,7 +673,6 @@ class Beam:
 
         ax = subband.plot_waterfall(
             polarization=polarization,
-            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -687,7 +683,6 @@ class Beam:
         subband: int | str,
         time: int = 0,
         polarization: int = 0,
-        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -699,7 +694,6 @@ class Beam:
         ax = subband.plot_spectrum(
             time=time,
             polarization=polarization,
-            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -709,7 +703,6 @@ class Beam:
         self,
         time: int = 0,
         polarization: int = 0,
-        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -718,7 +711,6 @@ class Beam:
             sb.plot_spectrum(
                 time=time,
                 polarization=polarization,
-                # bin=bin,
                 flag=flag,
                 ax=ax,
                 label=sb.label,
@@ -833,7 +825,6 @@ class SDHDF:
         beam: int | str,
         subband: int | str,
         polarization: int = 0,
-        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -843,7 +834,6 @@ class SDHDF:
             beam (int | str): Beam to select.
             subband (int | str): Subband to select.
             polarization (int, optional): Polarization to select. Defaults to 0.
-            bin (int, optional): Bin to select. Defaults to 0.
             flag (bool, optional): Blank flagged data. Defaults to False.
         """
         if isinstance(beam, int):
@@ -853,7 +843,6 @@ class SDHDF:
         ax = beam.plot_waterfall(
             subband=subband,
             polarization=polarization,
-            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -865,7 +854,6 @@ class SDHDF:
         subband: int | str,
         time: int = 0,
         polarization: int = 0,
-        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -878,7 +866,6 @@ class SDHDF:
             subband=subband,
             time=time,
             polarization=polarization,
-            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -889,7 +876,6 @@ class SDHDF:
         beam: int | str,
         time: int = 0,
         polarization: int = 0,
-        # bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -901,7 +887,6 @@ class SDHDF:
         ax = beam.plot_wide(
             time=time,
             polarization=polarization,
-            # bin=bin,
             flag=flag,
             **plot_kwargs,
         )
@@ -912,10 +897,6 @@ class SDHDF:
 
     def print_obs_config(self, format: str = "fancy_outline"):
         self.metadata.print_obs_config(format=format)
-
-    #def print_attributes(self):
-    #    self.metadata.print_attributes()
-    #    #self.attributes.print_attributes()
 
     def flag_persistent_rfi(self):
         """Flag persistent RFI in all subbands."""

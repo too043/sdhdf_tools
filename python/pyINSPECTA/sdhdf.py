@@ -19,6 +19,7 @@ import xarray as xr
 from astropy.table import Table
 from dask.diagnostics import ProgressBar
 from dask.distributed import Client, get_client, get_task_stream, progress
+import dask.array as da
 from tqdm.auto import tqdm
 from xarray import DataArray, Dataset, Variable
 
@@ -335,6 +336,10 @@ class SubBand:
                 data = np.array(data)
                 freqs = np.array(freqs)
                 flags = np.array(flags)
+            else:
+                data = da.from_array(data[:], chunks="auto")
+                freqs = da.from_array(freqs[:], chunks="auto")
+                flags = da.from_array(flags[:], chunks="auto")
 
             # Process into xarray
             coords = {col: ("time", meta[col].values) for col in meta.table.columns}
@@ -462,15 +467,19 @@ class SubBand:
         chunks = {d: 1 for d in data_xr_flg.dims}
         chunks["channel"] = len(self.astronomy_dataset.data.channel)
         data_xr_flg = data_xr_flg.chunk(chunks)
-        mask = xr.apply_ufunc(
-            flagging.box_filter,
-            data_xr_flg,
-            input_core_dims=[["channel"]],
-            output_core_dims=[["channel"]],
-            kwargs={"sigma": sigma, "n_windows": n_windows},
-            dask="parallelized",
-            vectorize=True,
-            output_dtypes=(bool),
+        mask = (
+            xr.DataArray(
+                data_xr_flg.data.map_blocks(
+                    flagging.box_filter,
+                    sigma=sigma,
+                    n_windows=n_windows,
+                ),
+                dims=data_xr_flg.dims,
+                coords=data_xr_flg.coords,
+            )
+            .sum(dim="polarization")
+            .squeeze()
+            .astype(int)
         )
         self.astronomy_dataset["flag"] = mask.astype(int).compute()
         hist = history.generate_history_row()

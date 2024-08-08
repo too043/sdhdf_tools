@@ -5,10 +5,8 @@
 from __future__ import annotations
 
 import json
-from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import h5py
 import matplotlib.pyplot as plt
@@ -17,8 +15,7 @@ import pandas as pd
 import pkg_resources
 import xarray as xr
 from astropy.table import Table
-from dask.diagnostics import ProgressBar
-from dask.distributed import Client, get_client, get_task_stream, progress
+from dask.distributed import Client
 import dask.array as da
 from tqdm.auto import tqdm
 from xarray import DataArray, Dataset, Variable

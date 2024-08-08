@@ -3,20 +3,13 @@
 """SDHDF flagging utilities"""
 
 import warnings
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
 
-import h5py
-import dask.array as da
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pkg_resources
 from astropy.stats import mad_std, sigma_clip
-from astropy.table import Table
-from tqdm.auto import tqdm
-from xarray import DataArray, Dataset, Variable
+from xarray import DataArray
 
 
 class AutoFlagError(Exception):

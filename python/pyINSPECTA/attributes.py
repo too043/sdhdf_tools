@@ -4,12 +4,8 @@
 
 __author__ = ["Danny Price", "Alec Thomson"]
 
-from astropy.table import QTable
 import pandas as pd
-from astropy.time import Time
-from .exceptions import VerificationError
 import h5py
-import numpy as np
 
 # Ignore astropy warnings
 import warnings

@@ -3,19 +3,13 @@
 """SDHDF flagging utilities"""
 
 import warnings
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
 
-import h5py
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pkg_resources
 from astropy.stats import mad_std, sigma_clip
-from astropy.table import Table
-from tqdm.auto import tqdm
-from xarray import DataArray, Dataset, Variable
+from xarray import DataArray
 
 
 class AutoFlagError(Exception):
@@ -54,7 +48,7 @@ def get_persistent_rfi(telescope: str = "Parkes") -> pd.DataFrame:
     return rfi_df
 
 
-def box_filter(spectrum, sigma=3, n_windows=100):
+def box_filter(spectrum: np.ndarray | DataArray, sigma=3, n_windows=100):
     """
     Filter a spectrum using a box filter.
     """
@@ -71,4 +65,9 @@ def box_filter(spectrum, sigma=3, n_windows=100):
                 _dat, sigma=sigma, maxiters=None, stdfunc=mad_std, masked=True
             )
         dat_filt[i * window_size : window_size + i * window_size] = _dat_filt.mask
+    if isinstance(spectrum, DataArray):
+        return DataArray(dat_filt, dims=spectrum.dims, coords=spectrum.coords)
+    
     return dat_filt
+    
+

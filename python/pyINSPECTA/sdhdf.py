@@ -900,18 +900,24 @@ class SDHDF:
 
     def flag_persistent_rfi(self):
         """Flag persistent RFI in all subbands."""
-        telescope = self.metadata.primary_header["TELESCOPE"][0]
+
+        if "TELESCOPE" in self.metadata.primary_header:
+            telescope = self.metadata.primary_header["TELESCOPE"][0]
+        else:
+            logger.warning("No telescope information found in file! Guessing `Parkes`...")
+            telescope = "Parkes"
         rfi = flagging.get_persistent_rfi(telescope=telescope)
         for i, x in tqdm(
             rfi.iterrows(), desc="Flagging persistent RFI", total=len(rfi)
         ):
             for beam in self.beams:
                 for sb in beam.subbands:
-                    sb.astronomy_dataset.flag.loc[
-                        dict(frequency=slice(x["freq0 MHz"], x["freq1 MHz"]))
-                    ] = 1
+                    freqs = sb.astronomy_dataset.frequency
+                    low_freq, high_freq = x["freq0 MHz"], x["freq1 MHz"]
+                    flags = (freqs > low_freq) & (freqs < high_freq)
+                    sb.astronomy_dataset["flag"] = sb.astronomy_dataset.flag.where(flags, 1, 0)
         row = history.generate_history_row()
-        self.metadata.history = pd.concat([self.metadata.history, row])
+        self.metadata.history = pd.concat([self.metadata.history.table, row])
 
     def auto_flag_rfi(
         self,

@@ -7,12 +7,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from importlib import resources
 
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pkg_resources
 import xarray as xr
 from astropy.table import Table
 from dask.distributed import Client
@@ -55,9 +55,8 @@ def _get_sdhdf_version(filename: Path) -> tuple[float, Path]:
             version = 2.9
 
         try:
-            definition_file = Path(pkg_resources.resource_filename(
-                "pyINSPECTA", f"definitions/sdhdf_def_v{version}.json"
-            ))
+            with resources.path("pyINPSECTA", "definitions") as definition_dir:
+                definition_file = definition_dir / f"sdhdf_def_v{version}.json"
         except ValueError as e:
             raise ValueError(f"SDHDF definition template {definition_file} not found.") from e
 

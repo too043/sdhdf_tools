@@ -498,7 +498,7 @@ void sdhdf_set_pcm_response(sdhdf_calibration *polCal,double complex J1[2][2],do
 // Routine to load a PCM file (FITS format)
 // to model cross-coupling within the receiver and noise source system
 //
-void sdhdf_loadPCM(sdhdf_calibration *polCal,int *nPolCalChan,char *observatory, char *rcvr,char *pcmFile,int av,float av1freq,float av2freq)
+void sdhdf_loadPCM(sdhdf_calibration *polCal,int *nPolCalChan,char *observatory, char *rcvr,char *pcmFile,int av,float av1freq,float av2freq,int pcmClear)
 {
   int status=0;
   fitsfile *fptr;
@@ -545,9 +545,18 @@ void sdhdf_loadPCM(sdhdf_calibration *polCal,int *nPolCalChan,char *observatory,
   fits_read_col(fptr,TFLOAT,colnum_data,1,1,nchan_cal_poln*3,&n_fval,data,&initflag,&status);
   for (i=0;i<nchan_cal_poln;i++)
     {
-      polCal[i].noiseSource_QoverI = data[i*3];
-      polCal[i].noiseSource_UoverI = data[i*3+1];
-      polCal[i].noiseSource_VoverI = data[i*3+2];      
+      if (pcmClear==1)
+	{
+	  polCal[i].noiseSource_QoverI = 1.0;
+	  polCal[i].noiseSource_UoverI = 0.0;
+	  polCal[i].noiseSource_VoverI = 0.0;
+	}
+      else
+	{
+	  polCal[i].noiseSource_QoverI = data[i*3];
+	  polCal[i].noiseSource_UoverI = data[i*3+1];
+	  polCal[i].noiseSource_VoverI = data[i*3+2];      
+	}
     }
   
   *nPolCalChan = nchan_cal_poln;
@@ -591,6 +600,19 @@ void sdhdf_loadPCM(sdhdf_calibration *polCal,int *nPolCalChan,char *observatory,
 	  polCal[i].constant_r1 = 0;
 	  polCal[i].constant_r2 = 0;
 	  polCal[i].bad = 1;
+	}
+      else if (pcmClear==1) // Adding in a method to switch off the PCM
+	{
+	  //	  printf("I am in here\n");
+	  polCal[i].constant_gain = data[i*7];
+	  polCal[i].constant_diff_gain = data[i*7+1];
+	  polCal[i].constant_diff_phase = data[i*7+2];
+	  printf("Got %g %g %g\n",polCal[i].constant_gain,polCal[i].constant_diff_gain,polCal[i].constant_diff_phase);
+	  polCal[i].constant_b1 = 0;
+	  polCal[i].constant_b2 = 0;
+	  polCal[i].constant_r1 = 0;
+	  polCal[i].constant_r2 = 0;
+	  polCal[i].bad = 0;	 
 	}
       else
 	{

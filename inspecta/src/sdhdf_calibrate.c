@@ -37,7 +37,7 @@
 #define VERSION "v0.5"
 #define MAX_POL_CAL_CHAN 4096    // FIX ME -- SHOULD SET DYNAMICALLY
 
-void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *fluxCalFile, int fluxCalMethod,int polCalMethod,int tcal,int verbose,char *args);
+void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *fluxCalFile, int fluxCalMethod,int polCalMethod,int tcal,int verbose,char *args,double tdumpAstro,int setTdumpAstro,double tdumpCal,int nchanAstro,int setNchanAstro,int normCal,int normAstro);
 
 void help()
 {
@@ -69,7 +69,13 @@ int main(int argc,char *argv[])
   int fluxCalMethod = 1; // 0 = closest, 1 = spline, 2 = average
   int polCalMethod = 1;  // 0 = closest, 1 = spline, 2 = average
   char args[MAX_ARGLEN]="";
-
+  double tdumpAstro=-1;
+  int setTdumpAstro=0;
+  double tdumpCal=-1;
+  int nchanAstro=-1;
+  int setNchanAstro=0;
+  int normCal=0;
+  int normAstro=0;
   strcpy(extension,"calibrate");
 
   sdhdf_storeArguments(args,MAX_ARGLEN,argc,argv);
@@ -78,6 +84,15 @@ int main(int argc,char *argv[])
     {
       if (strcmp(argv[i],"-v")==0)
 	verbose=1;    
+      else if (strcmp(argv[i],"-tdumpAstro")==0)
+	{sscanf(argv[++i],"%lf",&tdumpAstro); setTdumpAstro=1;}
+      else if (strcmp(argv[i],"-nchanAstro")==0)
+	{sscanf(argv[++i],"%d",&nchanAstro); setNchanAstro=1;}
+      else if (strcmp(argv[i],"-norm")==0)
+	{
+	  normCal=1;
+	  normAstro=1;
+	}
       else if (strcmp(argv[i],"-V")==0)
 	verbose=2;    
       else if (strcmp(argv[i],"-e")==0)
@@ -102,12 +117,11 @@ int main(int argc,char *argv[])
     {
       printf("Processing file: %s\n",fname[i]);
       sdhdf_formOutputFilename(fname[i],extension,oname);
-      processFile(fname[i],oname,stabiliseType,out_npol,fluxCalFile,fluxCalMethod,polCalMethod,tcal,verbose,args);
+      processFile(fname[i],oname,stabiliseType,out_npol,fluxCalFile,fluxCalMethod,polCalMethod,tcal,verbose,args,tdumpAstro,setTdumpAstro,tdumpCal,nchanAstro,setNchanAstro,normCal,normAstro);
     }
 
 }
-
-void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *fluxCalFile, int fluxCalMethod,int polCalMethod,int tcal,int verbose,char *args)
+void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *fluxCalFile, int fluxCalMethod,int polCalMethod,int tcal,int verbose,char *args,double tdumpAstro,int setTdumpAstro,double tdumpCal,int nchanAstro,int setNchanAstro,int normCal,int normAstro)
 {
   int ii,i,c,j,k,b;
   sdhdf_fileStruct *inFile,*outFile;
@@ -277,16 +291,16 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 	  nFitData=0; 
 	  for (k=0;k<load_nchanCal;k++)
 	    {
-	      //	      printf("checking %g %g %g\n",load_calFreq[k],inFile->beam[b].bandData[j].astro_data.freq[0] , inFile->beam[b].bandData[j].astro_data.freq[inFile->beam[b].bandHeader[j].nchan-1]);
-	      if (load_calFreq[k] > inFile->beam[b].bandData[j].astro_data.freq[0] &&
-		  load_calFreq[k] < inFile->beam[b].bandData[j].astro_data.freq[inFile->beam[b].bandHeader[j].nchan-1])
+	      printf("checking %g %g %g\n",load_calFreq[k],inFile->beam[b].bandData[j].astro_data.freq[0] , inFile->beam[b].bandData[j].astro_data.freq[inFile->beam[b].bandHeader[j].nchan-1]);
+	      if (load_calFreq[k] >= inFile->beam[b].bandData[j].astro_data.freq[0] &&
+		  load_calFreq[k] <= inFile->beam[b].bandData[j].astro_data.freq[inFile->beam[b].bandHeader[j].nchan-1])
 		{
 		  fitX[nFitData] = load_calFreq[k];
 		  fitY_aa[nFitData] = load_calAA[k];
 		  fitY_bb[nFitData] = load_calBB[k];
 		  fitY_re[nFitData] = load_calRe[k];
 		  fitY_im[nFitData] = load_calIm[k];
-		  //		  printf("Fit values = %g %g %g %g %g\n",fitX[nFitData],fitY_aa[nFitData],fitY_bb[nFitData],fitY_re[nFitData],fitY_im[nFitData]);
+		  printf("Fit values = %g %g %g %g %g\n",fitX[nFitData],fitY_aa[nFitData],fitY_bb[nFitData],fitY_re[nFitData],fitY_im[nFitData]);
 		  nFitData++;
 		}
 	    }
@@ -322,7 +336,22 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 	  meanFluxValAA /= (double)meanFluxValN;
 	  meanFluxValBB /= (double)meanFluxValN;
 	  printf("Mean flux value for AA/BB = %g, %g, number of entries = %d\n",meanFluxValAA,meanFluxValBB,meanFluxValN);
-	
+	  // Scale the fluxcal
+	  if ((normAstro == 1 || normCal==1))
+	    {
+	      int nbinCal = 32; // WARNING HARDCODED
+	      double fluxScale;
+	      int nchanCal;
+	      double tdumpCal;
+	      
+	      nchanCal = inFile->beam[b].calBandHeader[j].nchan;
+	      tdumpCal = inFile->beam[b].calBandHeader[j].dtime;
+	      //			      printf("Scaling factor = %g\n",((double)nchanAstro/(double)nchanCal * (double)1.0/(double)nbinCal * tdumpCal /tdumpAstro));
+	      //			      printf("pre-fluxScale = %g\n",fluxScale);
+	      fluxScale = ((double)nchanAstro/(double)nchanCal * (double)1.0/(double)nbinCal * tdumpCal /tdumpAstro); 
+	      meanFluxValAA *= fluxScale;
+	      meanFluxValBB *= fluxScale;
+	    }
 	  //
 
 	  // Get mean pol cal values in the relevant part of the band
@@ -394,13 +423,15 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 		      cal_bb  = sdhdf_splineValue(freq,load_nchanCal,load_calFreq,interpCoeff_BB);
 		      cal_rab = sdhdf_splineValue(freq,load_nchanCal,load_calFreq,interpCoeff_Re);
 		      cal_iab = sdhdf_splineValue(freq,load_nchanCal,load_calFreq,interpCoeff_Im);
+		      //		      printf("pol calibration solution %g %g %g %g [1]\n",cal_aa,cal_bb,cal_rab,cal_iab);
 		    }
 		  else if (polCalMethod==2)
 		    {
 		      cal_aa = meanPolValAA;
-		      cal_bb = meanPolValAA;
-		      cal_rab = meanPolValAA;
-		      cal_iab = meanPolValAA;
+		      cal_bb = meanPolValBB;
+		      cal_rab = meanPolValRe;
+		      cal_iab = meanPolValIm;
+		      //		      printf("pol calibration solution %g %g %g %g [2]\n",cal_aa,cal_bb,cal_rab,cal_iab);
 		    }
 		  else if (polCalMethod==3)
 		    {
@@ -424,7 +455,7 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 		      stabilised_bb = measured_bb*cal_aa/(pow(cal_rab,2)+pow(cal_iab,2));
 		    }
 		  // SHOULD CHECK |AB_cal|^2 = AA_cal*BB_cal *** DO THIS ****
-		  if (stabiliseType==1 || stabiliseType==3) // Not assuming perfect correlation of the cal
+		  if (stabiliseType==1  || stabiliseType==3) // Not assuming perfect correlation of the cal
 		    stabilise_normFactor = (pow(cal_rab,2)+pow(cal_iab,2));
 		  else if (stabiliseType==2)
 		    stabilise_normFactor = sqrt(pow(cal_rab,2)+pow(cal_iab,2))*sqrt(cal_aa*cal_bb);

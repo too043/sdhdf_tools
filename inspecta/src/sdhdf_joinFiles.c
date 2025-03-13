@@ -191,13 +191,13 @@ int main(int argc,char *argv[])
 	  // Need to use: sdhdf_copyEntireGroupDifferentLabels
 	  //	  sdhdf_copyRemainder(inFile,outFile,0);
 	}
-      sdhdf_writeBeamHeader(outFile,beamHeader,nBeam);		
+      sdhdf_writeBeamHeader(outFile,beamHeader,nBeam,inFile->primary[0].hdr_defn_version);
       for (i=0;i<nOutBands;i++)
 	printf("band label = %s\n",outBandParams[i].label);
-      sdhdf_writeBandHeader(outFile,outBandParams,inFile0->beamHeader[b].label,nOutBands,1);
+      sdhdf_writeBandHeader(outFile,outBandParams,inFile0->beamHeader[b].label,nOutBands,1,inFile->primary[0].hdr_defn_version);
 
       if (strcmp(inFile->primary[0].cal_mode,"ON")==0)
-	sdhdf_writeBandHeader(outFile,outCalBandParams,inFile0->beamHeader[b].label,nOutBands,2);
+	sdhdf_writeBandHeader(outFile,outCalBandParams,inFile0->beamHeader[b].label,nOutBands,2,inFile->primary[0].hdr_defn_version);
       free(outBandParams);
       free(outCalBandParams);
     }

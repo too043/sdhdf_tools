@@ -256,7 +256,7 @@ int main(int argc,char *argv[])
 
 	  free(out_data);
 	}
-      sdhdf_writeBandHeader(outFile,inBandParams,file0->beamHeader[b].label,file0->beam[b].nBand,1);
+      sdhdf_writeBandHeader(outFile,inBandParams,file0->beamHeader[b].label,file0->beam[b].nBand,1,inFile->primary[0].hdr_defn_version);
       free(inBandParams);
     }
   sdhdf_writeHistory(outFile,file0->history,file0->nHistory);  

@@ -33,6 +33,7 @@ typedef struct dataModelStruct {
   float *freq;
   float *originalData;
   float *model;
+  float *subtract;
   float *wts;
 } dataModelStruct;
 
@@ -40,13 +41,13 @@ typedef struct dataModelStruct {
 //
 // Spline interpolation
 //
-void writeModel(sdhdf_fileStruct *outFile,dataModelStruct *model,int nband);
+void writeModel(sdhdf_fileStruct *outFile,dataModelStruct *model,int nband,int subtract);
 
 // Smoothing spline algorithms
 void SPLINE(int N, float *Z, float *ZF, float ZSP, float ZPV);
 void **MATRIX(int nrows, int ncols, int first_row, int first_col,int element_size);
 void errorAction(int N, double *Y, float *ZF);
-void modelSpectrum(dataModelStruct *model,int nband,sdhdf_fileStruct *outFile);
+void modelSpectrum(dataModelStruct *model,int nband,sdhdf_fileStruct *outFile,int subtract);
 
 void help()
 {
@@ -55,6 +56,8 @@ void help()
   printf("Command line arguments:\n\n");
   printf("-f <filename>     Input filename\n");
   printf("-sb <band>        Input band number\n");
+  printf("-subtract         Subtract model from original data when output\n");
+  
   printf("\n\n");
   printf("The output is an interactive display. The following commands are available\n\n");
   printf(">                 Move to next band\n");
@@ -77,7 +80,8 @@ int main(int argc,char *argv[])
   char fname[MAX_STRLEN]="unset";
   sdhdf_fileStruct *inFile;
   dataModelStruct *model;
-  
+
+  int subtract = 0;
   int ibeam=0;
   int idump,iband;
   int dataSize;
@@ -107,6 +111,7 @@ int main(int argc,char *argv[])
       if (strcmp(argv[i],"-f")==0)   	     strcpy(fname,argv[++i]);	
       else if (strcmp(argv[i],"-sb")==0) sscanf(argv[++i],"%d",&iband);
       else if (strcmp(argv[i],"-h")==0) {help(); exit(1);}
+      else if (strcmp(argv[i],"-subtract")==0) {subtract=1;}
     }
   sdhdf_openFile(oname,outFile,3);
   sdhdf_initialiseFile(inFile);
@@ -142,6 +147,7 @@ int main(int argc,char *argv[])
       dataSize = nchan*nsub*npol;
       model[i].freq = (float *)malloc(sizeof(float)*nchan);
       model[i].originalData = (float *)malloc(sizeof(float)*dataSize);
+      model[i].subtract = (float *)malloc(sizeof(float)*dataSize);
       model[i].model = (float *)malloc(sizeof(float)*dataSize);
       model[i].wts = (float *)malloc(sizeof(float)*nchan*nsub);
 
@@ -154,8 +160,9 @@ int main(int argc,char *argv[])
 	    {
 	      // FIX ME: using [0] for frequency dump
 	      model[i].freq[j]         = inFile->beam[ibeam].bandData[i].astro_data.freq[j];
-	      model[i].model[k*nchan*npol+j] = model[i].originalData[k*nchan*npol+j] = inFile->beam[ibeam].bandData[i].astro_data.pol1[j+k*nchan];
-	      model[i].model[k*nchan*npol+nchan + j] = model[i].originalData[k*nchan*npol+nchan+j] = inFile->beam[ibeam].bandData[i].astro_data.pol2[j+k*nchan];
+	      model[i].model[k*nchan*npol+j] = model[i].subtract[k*nchan*npol+j] = model[i].originalData[k*nchan*npol+j] = inFile->beam[ibeam].bandData[i].astro_data.pol1[j+k*nchan];
+	      model[i].model[k*nchan*npol+nchan + j] = model[i].subtract[k*nchan*npol+nchan+j] = model[i].originalData[k*nchan*npol+nchan+j] = inFile->beam[ibeam].bandData[i].astro_data.pol2[j+k*nchan];
+
 	      // SHOULD GET POL 2 and POL 3	      
 
 	    }
@@ -168,13 +175,14 @@ int main(int argc,char *argv[])
 
   
   // Do the modelling
-  modelSpectrum(model,nband,outFile);
+  modelSpectrum(model,nband,outFile,subtract);
 
 
   for (i=0;i<nband;i++)
     {
       free(model[i].freq);
       free(model[i].originalData);
+      free(model[i].subtract);
       free(model[i].model);
       free(model[i].wts);
     }
@@ -185,7 +193,7 @@ int main(int argc,char *argv[])
 }
 
 
-void modelSpectrum(dataModelStruct *model,int nband,sdhdf_fileStruct *outFile) // sdhdf_fileStruct *inFile,int ibeam,int iband,int idump)
+void modelSpectrum(dataModelStruct *model,int nband,sdhdf_fileStruct *outFile,int subtract)
 {
   float *fx;
   float *fy1,*fy2,*fy3,*fy4;
@@ -274,11 +282,16 @@ void modelSpectrum(dataModelStruct *model,int nband,sdhdf_fileStruct *outFile) /
 	SPLINE(model[i].original_nchan,&(model[i].originalData[0]),&(model[i].model[0]),splineLength,splineVariance);
 	SPLINE(model[i].original_nchan,&(model[i].originalData[model[i].original_nchan]),
 	       &(model[i].model[model[i].original_nchan]),splineLength,splineVariance);
+	for (j=0;j<model[i].original_nchan;j++)
+	  {
+	    model[i].subtract[j] = model[i].originalData[j] - model[i].model[j];
+	    model[i].subtract[j+model[i].original_nchan] = model[i].originalData[j+model[i].original_nchan] - model[i].model[j+model[i].original_nchan];
+	  }
       }
     for (j=0;j<model[iband].original_nchan;j++)
       {
 	fy1_model[j] = model[iband].model[j];
-	fy2_model[j] = model[iband].model[j+model[iband].original_nchan];
+	fy2_model[j] = model[iband].model[j+model[iband].original_nchan];	
 	//	printf("model = %g %g  (%d %d %d)\n",fy1_model[j],fy2_model[j],i,model[i].original_nchan,maxNchan);
       } 
     
@@ -300,7 +313,7 @@ void modelSpectrum(dataModelStruct *model,int nband,sdhdf_fileStruct *outFile) /
     // Should have an option to split the plot into each polarisation
     //
     if (key=='d') plotData*=-1;
-    else if (key=='s') writeModel(outFile,model,nband);
+    else if (key=='s') writeModel(outFile,model,nband,subtract);
     else if (key=='m') plotModel*=-1;
     else if (key=='l') {
       printf("Current spline length (rigidity) = %f. Enter new value: ",splineLength);
@@ -638,7 +651,7 @@ void SPLINE(int N, float *Z, float *ZF, float ZSP, float ZPV)
     return;
 }
 
-void writeModel(sdhdf_fileStruct *outFile,dataModelStruct *model,int nband) 
+void writeModel(sdhdf_fileStruct *outFile,dataModelStruct *model,int nband,int subtract) 
 {
   int nbeam=1;
   int i,j,k,b,ii;
@@ -655,6 +668,9 @@ void writeModel(sdhdf_fileStruct *outFile,dataModelStruct *model,int nband)
       nsub  = model[i].original_nsub;
       npol  = model[i].original_npol;
 
-      sdhdf_replaceSpectrumData(outFile,model[i].bandLabel,b,i,model[i].model,nsub,npol,nchan);
+      if (subtract==1)
+	sdhdf_replaceSpectrumData(outFile,model[i].bandLabel,b,i,model[i].subtract,nsub,npol,nchan);
+      else
+	sdhdf_replaceSpectrumData(outFile,model[i].bandLabel,b,i,model[i].model,nsub,npol,nchan);
     }
 }

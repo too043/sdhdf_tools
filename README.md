@@ -10,17 +10,19 @@ Spectral-Domain Hierarchical Data Format (SDHDF) files.
 Formerly known as 'sdhdfProc', INSPECTA is a software package to read, 
 manipulate and process radio astronomy data in SDHDF format.
 
+Please note: if you make use of this software, please reference Toomey et al. 2024:
+https://doi.org/10.1016/j.ascom.2024.100804
+
 **Author:**    George.Hobbs@csiro.au
 
-**Copyright:** CSIRO 2020, 2021, 2022, 2023, 2024
+**Copyright:** CSIRO 2020, 2021, 2022, 2023, 2024, 2025
 
-##
 ## Contents
 
 * containers
 * docs
 * inspecta 
-
+* python (including pyINSPECTA, developed by Alec.Thompson@csiro.au)
 
 ## Building INSPECTA
 
@@ -32,7 +34,7 @@ Erfa (https://github.com/liberfa/erfa) or the SOFA library (http://www.iausofa.o
 
 HDF5 library (https://www.hdfgroup.org/downloads/hdf5) 
 
-Pgplot library (http://www.astro.caltech.edu/~tjp/pgplot/)
+Pgplot library (http://www.astro.caltech.edu/~tjp/pgplot/) 
 
 Calceph library (https://www.imcce.fr/recherche/equipes/asd/calceph/)
 
@@ -72,11 +74,6 @@ inspecta/runtime
 
 The repository has the following branches available:
 * master
-* sofa\_build
-
-(The master branch requires the ERFA library by default.
-Checkout the 'sofa\_build' branch if you need to use the SOFA library)
-
 * sdhdfv3
 Compatible with data written in SDHDF <=v3.0
 

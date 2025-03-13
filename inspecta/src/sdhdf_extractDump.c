@@ -196,7 +196,7 @@ int main(int argc,char *argv[])
 		      // For now just picking one frequency dump for output! ** FIX ME
 		      sdhdf_writeSpectrumData(outFile,inFile->beamHeader[b].label,inFile->beam[b].bandHeader[i].label,b,i,out_data,out_freq,1,nchan,1,npol,out_ndump,0,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
 		      printf("Writing obs params\n");
-		      sdhdf_writeObsParams(outFile,inFile->beam[b].bandHeader[i].label,inFile->beamHeader[b].label,i,outObsParams,out_ndump,1);
+		      sdhdf_writeObsParams(outFile,inFile->beam[b].bandHeader[i].label,inFile->beamHeader[b].label,i,outObsParams,out_ndump,1,inFile->primary[0].hdr_defn_version);
 		      printf("Releasing data\n");
 		      sdhdf_releaseBandData(inFile,b,ii,1);		  
 
@@ -204,7 +204,7 @@ int main(int argc,char *argv[])
 		      inBandParams[i].ndump = out_ndump;
 		    }
 		  printf("Writing band header\n");
-		  sdhdf_writeBandHeader(outFile,inBandParams,inFile->beamHeader[b].label,inFile->beam[b].nBand,1);
+		  sdhdf_writeBandHeader(outFile,inBandParams,inFile->beamHeader[b].label,inFile->beam[b].nBand,1,inFile->primary[0].hdr_defn_version);
 		  free(inBandParams);
 		}
 	    }
@@ -225,7 +225,7 @@ int main(int argc,char *argv[])
 	      outBeamHeader->nBand = inFile->beamHeader[selectBeam].nBand;
 	      inFile->primary[0].nbeam = 1;
 	      sdhdf_writePrimaryHeader(outFile,inFile->primary);
-	      sdhdf_writeBeamHeader(outFile,outBeamHeader,1);
+	      sdhdf_writeBeamHeader(outFile,outBeamHeader,1,inFile->primary[0].hdr_defn_version);
 	      free(outBeamHeader);
 	    }
 	  sdhdf_writeHistory(outFile,inFile->history,inFile->nHistory);

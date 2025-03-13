@@ -64,7 +64,20 @@
 //
 // Attribute structure
 //
+typedef struct sdhdf_attributes_struct { //2
+  char name[MAX_STRLEN];
+  char key[MAX_STRLEN];
+  char unit[MAX_STRLEN];
+  char value[MAX_STRLEN];
 
+  // not used but included while we get it working
+  float fvalue;
+  int   ivalue;
+  int   attributeType; // 0 = string, 1 = float, 2 = int
+  //
+} sdhdf_attributes_struct;
+
+/*
 typedef struct sdhdf_attributes_struct {
   char  key[MAX_STRLEN];
   char  value[MAX_STRLEN];
@@ -72,7 +85,7 @@ typedef struct sdhdf_attributes_struct {
   int   ivalue;
   int   attributeType; // 0 = string, 1 = float, 2 = int
 } sdhdf_attributes_struct;
-
+*/
 
 //
 // Parameters relating to spectral dumps
@@ -118,6 +131,7 @@ typedef struct sdhdf_spectralDumpsStruct {
 // Primary header
 typedef struct sdhdf_primaryHeaderStruct {
   char date[20];
+  int  hdr_prior4; // = 1 if before v4.0 or 0 otherwise
   char hdr_defn[20];
   char hdr_defn_version[20];
   char file_format[20];

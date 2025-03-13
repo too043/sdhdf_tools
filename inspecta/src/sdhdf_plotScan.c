@@ -479,7 +479,7 @@ int main(int argc,char *argv[])
 	for (i=0;i<inFile->beam[ibeam].nBand;i++)
 	  {
 	    if (sbHighlight == i)
-	      cpgsci(6);
+	      cpgsci(2);
 	    cpgline(plotNdump,fx[i],fy[i]);	    
 	    cpgsci(1);
 	    //	    if (label==1)
@@ -514,7 +514,7 @@ int main(int argc,char *argv[])
 	  cpgpt(ndumps,fx[select],fy[select],6);
 	if (xaxis == 7 || xaxis == 8)
 	  {
-	    cpgsci(6);
+	    cpgsci(2);
 	    cpgline(1024,fModelX[select],fModelY[select]);
 	    cpgsci(1);
 	    lineX[0] = 0; lineX[1]=0;

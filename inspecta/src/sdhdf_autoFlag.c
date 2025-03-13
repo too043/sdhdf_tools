@@ -74,6 +74,8 @@ int main(int argc,char *argv[])
   int persistentFlag = 0;
   int transientFlag = 0;
   int narrowFlag = 0;
+
+  int resetWeights=0;
   
   double freq;
   int flagIt;
@@ -106,6 +108,7 @@ int main(int argc,char *argv[])
       else if (strcmp(argv[i],"-edge")==0) {sscanf(argv[++i],"%f",&bandEdge); bandEdgeFlag=1;}
       else if (strcmp(argv[i],"-persistent")==0) {persistentFlag=1;}
       else if (strcmp(argv[i],"-transient")==0) {transientFlag=1;}
+      else if (strcasecmp(argv[i],"-resetWeights")==0) {resetWeights=1;}
       else if (strcmp(argv[i],"-narrow")==0) {narrowFlag=1;}
       else if (strcasecmp(argv[i],"-autoFlagDump")==0) {autoFlagDump=1; sscanf(argv[++i],"%f",&autoFlagDump_sigma);}
       else if (strcmp(argv[i],"-h")==0) help();
@@ -171,7 +174,12 @@ int main(int argc,char *argv[])
 		flagNarrowRFI(inFile,b,i);
 	      if (autoFlagDump == 1)
 		flagAutoDump(inFile,autoFlagDump_sigma,b,i);
-
+	      if (resetWeights==1)
+		{
+		  int k;
+		  for (k=0;k<inFile->beam[b].bandHeader[i].nchan;k++)
+		    inFile->beam[b].bandData[i].astro_data.dataWeights[k] = 1;
+		}
 	      sdhdf_writeDataWeights(outFile,b,i,inFile->beam[b].bandData[i].astro_data.dataWeights,inFile->beam[b].bandHeader[i].nchan,inFile->beam[b].bandHeader[i].ndump,inFile->beamHeader[b].label,inFile->beam[b].bandHeader[i].label);
 	      sdhdf_writeFlags(outFile,b,i,inFile->beam[b].bandData[i].astro_data.flag,inFile->beam[b].bandHeader[i].nchan,inFile->beam[b].bandHeader[i].ndump,inFile->beamHeader[b].label,inFile->beam[b].bandHeader[i].label);
 	      sdhdf_releaseBandData(inFile,b,i,1);

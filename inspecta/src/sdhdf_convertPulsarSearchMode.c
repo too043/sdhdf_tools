@@ -235,15 +235,15 @@ int main(int argc,char *argv[])
   printf("Writing output file %s\n",outname);
   sdhdf_openFile(outname,outFile,3);
 
-  sdhdf_writeBeamHeader(outFile,beamHeader,nBeam);
+  sdhdf_writeBeamHeader(outFile,beamHeader,nBeam,(char *)"4.0");
   sdhdf_writePrimaryHeader(outFile,primaryHeader);
   for (b=0;b<nBeam;b++)
     {
       printf("Write band %s %s\n",beamHeader[b].label,bandHeader[b].label);
-      sdhdf_writeBandHeader(outFile,bandHeader,beamHeader[b].label,1,1);
+      sdhdf_writeBandHeader(outFile,bandHeader,beamHeader[b].label,1,1,(char *)"4.0");
 
       printf("Write obs\n");
-      sdhdf_writeObsParams(outFile,bandHeader[0].label,beamHeader[b].label,0,obsParams,ndump,1);
+      sdhdf_writeObsParams(outFile,bandHeader[0].label,beamHeader[b].label,0,obsParams,ndump,1,(char *)"4.0");
       // FIX ME: Only sending 1 frequency channel through
       printf("Writing data\n");
       sdhdf_writeQuantisedSpectrumData(outFile,beamHeader[b].label,bandHeader->label,b,0,storeVals,freqVals,1,nchan,nsblk*ndump/samplesperbyte,npol,1,1,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);

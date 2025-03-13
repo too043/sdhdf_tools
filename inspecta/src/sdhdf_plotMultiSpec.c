@@ -37,7 +37,7 @@
 
 void drawIncludeWeights(int nchan,float *freq,float *pol,float *wt);
 void drawMolecularLine(float freq,char *label,float minX,float maxX,float minY,float maxY);
-void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *grDev,char *fname,float f0,int setf0,float f1,int setf1,int av,int sump,int nx,int ny,int polPlot,float chSize,float locky1,float locky2,int join,double fref,float bl_f0,float bl_f1,int setBaseline,int setLog,int stokes,char *ylabel,char *label,int labelPos,float labelChSize,float *hline,int nHline,float *vline,int nVline,double yscale,int rlcp,int flipV,char *title);
+void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *grDev,char *fname,float f0,int setf0,float f1,int setf1,int av,int sump,int nx,int ny,int polPlot,float chSize,float locky1,float locky2,int join,double fref,float bl_f0,float bl_f1,int setBaseline,int setLog,int stokes,char *ylabel,char *label,int labelPos,float labelChSize,float *hline,int nHline,float *vline,int nVline,double yscale,int rlcp,int flipV,char *title,int nofname,int overlay);
 
 void help()
 {
@@ -67,8 +67,10 @@ void help()
   printf("-log                Set logarithmic plotting\n");
   printf("-nx <nx>            Set nx panels in the x-direction\n");  
   printf("-ny <ny>            Set ny panels in the y-direction\n");
-  printf("-p                  Sum polarisations\n");
-  printf("-RLCP               Plot right and left hand circular polarisation\n");
+  printf("-overlay            Overlay the plots\n");
+  printf("-p or -psum         Sum polarisations\n");
+  printf("-pav                Average polarisations\n");
+  printf("-rlcp               Plot right and left hand circular polarisation\n");
   printf("-sb <bandNumber>    Plot data within specified band number\n");
   printf("-sd <dumpNumber>    Plot data within specified spectral dump\n");
   printf("-stokes             Plot as Stokes parameters\n");
@@ -124,6 +126,8 @@ int main(int argc,char *argv[])
   char queryFile[1024]="query.txt";
   int recordQuery=0;
   FILE *fout;
+  int nofname=0;
+  int overlay=0;
   
   //  help();
   
@@ -150,6 +154,8 @@ int main(int argc,char *argv[])
 	  recordQuery=1;
 	  fout = fopen(queryFile,"a");
 	}
+      else if (strcmp(argv[i],"-nofname")==0)
+	nofname=1;
       else if (strcmp(argv[i],"-ylabel")==0)
 	strcpy(ylabel,argv[++i]);
       else if (strcmp(argv[i],"-title")==0)
@@ -160,6 +166,8 @@ int main(int argc,char *argv[])
 	sscanf(argv[++i],"%d",&labelPos);
       else if (strcmp(argv[i],"-yscale")==0)
 	sscanf(argv[++i],"%lf",&yscale);
+      else if (strcmp(argv[i],"-overlay")==0)
+	overlay=1;
       else if (strcmp(argv[i],"-log")==0)
 	setLog=1;      
       else if (strcmp(argv[i],"-stokes")==0)
@@ -186,8 +194,10 @@ int main(int argc,char *argv[])
 	sscanf(argv[++i],"%d",&nx);
       else if (strcmp(argv[i],"-ny")==0)
 	sscanf(argv[++i],"%d",&ny);
-      else if (strcmp(argv[i],"-p")==0)
+      else if (strcmp(argv[i],"-p")==0 || strcasecmp(argv[i],"-psum")==0)
 	sump=1;
+      else if (strcasecmp(argv[i],"-pav")==0)
+	sump=2;
       else if (strcmp(argv[i],"-join")==0)
 	join=1;
       else if (strcmp(argv[i],"-av")==0)
@@ -259,9 +269,9 @@ int main(int argc,char *argv[])
 		}
 	    }
 	  
-
+       
 	  plotSpectrum(inFile,ibeam, iband,idump,grDev,fname,f0,setf0,f1,setf1,av,sump,nx,ny,polPlot,chSize,locky1,locky2,join,fref,bl_f0,bl_f1,setBaseline,setLog,stokes,ylabel,label,labelPos,labelChSize,
-		       hline,nHline,vline,nVline,yscale,rlcp,flipV,title);	  	  
+		       hline,nHline,vline,nVline,yscale,rlcp,flipV,title,nofname,overlay);	  	  
 
 	  if (recordQuery==1)
 	    {
@@ -282,7 +292,7 @@ int main(int argc,char *argv[])
 }
 
 
-void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *grDev,char *fname,float f0,int setf0,float f1,int setf1,int av,int sump,int nx,int ny,int polPlot,float chSize,float locky1,float locky2,int join,double fref,float bl_f0,float bl_f1,int setBaseline,int setLog,int stokes,char *ylabel,char *label,int labelPos,float labelChSize,float *hline,int nHline,float *vline,int nVline,double yscale,int rlcp,int flipV,char *title)
+void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *grDev,char *fname,float f0,int setf0,float f1,int setf1,int av,int sump,int nx,int ny,int polPlot,float chSize,float locky1,float locky2,int join,double fref,float bl_f0,float bl_f1,int setBaseline,int setLog,int stokes,char *ylabel,char *label,int labelPos,float labelChSize,float *hline,int nHline,float *vline,int nVline,double yscale,int rlcp,int flipV,char *title,int nofname,int overlay)
 {
   static int entry=0;
   static int entryX=0;
@@ -427,6 +437,7 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *
 
 	  
 	  if (sump==1 && npol > 1) pol1[i] = pol1[i]+pol2[i];
+	  if (sump==2 && npol > 1) pol1[i] = 0.5*(pol1[i]+pol2[i]);
 	  
 	  if (setLog == 1)
 	    {
@@ -588,11 +599,14 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *
 
   if (join==0)
     {
-      if (setLog==-1)
-	cpgenv(minx,maxx,miny,maxy,0,1);
-      else
-	cpgenv(minx,maxx,miny,maxy,0,20);
-      if (strcmp(title,"UNSET")==0)
+      if (entry==0 || overlay==0)
+	{
+	  if (setLog==-1)
+	    cpgenv(minx,maxx,miny,maxy,0,1);
+	  else
+	    cpgenv(minx,maxx,miny,maxy,0,20);
+	}
+	  if (strcmp(title,"UNSET")==0)
 	{
 	  char fixLabel[1024];
 	  sdhdf_fixUnderscore(inFile->beam[ibeam].bandHeader[iband].label,fixLabel);
@@ -686,8 +700,11 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *
 	  else
 	    {	      
 	      char fixLabel[1024];
-	      sdhdf_fixUnderscore(inFile->fname,fixLabel);
-	      cpgtext(minx+(maxx-minx)*0.05,maxy-(maxy-miny)*0.15,fixLabel);
+	      if (nofname==0)
+		{
+		  sdhdf_fixUnderscore(inFile->fname,fixLabel);
+		  cpgtext(minx+(maxx-minx)*0.05,maxy-(maxy-miny)*0.15,fixLabel);
+		}
 	    }
 	}
     }
@@ -727,20 +744,26 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *
   if (polPlot==1)
     {
       // Do not plot flagged channels
-      cpgsci(1); drawIncludeWeights(nchan,freq,pol1,wt); cpgsci(1);
+      if (overlay==1)
+	cpgsci(entry+1);
+      else
+	cpgsci(1);
+      drawIncludeWeights(nchan,freq,pol1,wt); cpgsci(1);
       if (sump==0 && npol > 1)
 	{
-	  cpgsci(6); drawIncludeWeights(nchan,freq,pol2,wt); cpgsci(1);
+	  cpgsci(2); drawIncludeWeights(nchan,freq,pol2,wt); cpgsci(1);
 	}
     }
   else if (polPlot==2)
     {
-      cpgsci(6); drawIncludeWeights(nchan,freq,pol2,wt); cpgsci(1);
+      cpgsci(2); drawIncludeWeights(nchan,freq,pol2,wt); cpgsci(1);
       cpgsci(7); drawIncludeWeights(nchan,freq,pol3,wt); cpgsci(1);
       cpgsci(4); drawIncludeWeights(nchan,freq,pol4,wt); cpgsci(1);
       cpgsci(1); drawIncludeWeights(nchan,freq,pol1,wt); cpgsci(1);
     }
 
+
+  
   free(wt);
   free(useP1);
   free(useP2);

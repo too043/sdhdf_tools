@@ -118,7 +118,8 @@ int main(int argc,char *argv[])
   int averageCal=0;
   int noFluxCal=0;
   char pcmFile[1024];
-
+  int pcmClear=0;
+  
   // Default PCM file // FIX ME - THIS IS FOR PARKES
   strcpy(pcmFile,"uwl_210621_145853.extzoom.cal.hdf");
 
@@ -153,6 +154,8 @@ int main(int argc,char *argv[])
 	{sscanf(argv[++i],"%lf",&tdumpAstro); setTdumpAstro=1;}
       else if (strcmp(argv[i],"-nchanAstro")==0)
 	{sscanf(argv[++i],"%d",&nchanAstro); setNchanAstro=1;}
+      else if (strcmp(argv[i],"-pcmClear")==0)
+	pcmClear=1;
       else if (strcmp(argv[i],"-fluxcal")==0)
 	strcpy(fluxCalFile,argv[++i]);
       else if (strcasecmp(argv[i],"-pcmfile")==0)
@@ -242,7 +245,7 @@ int main(int argc,char *argv[])
 		  // Load the information within the PCM file	  
 		  // This is assuming same number of channels in the PCM cal as in the noise source *** FIX ME
 		  //
-		  sdhdf_loadPCM(polCal,&nPolCalChan,"parkes","UWL",pcmFile,averageCal,averageCalValuesF0,averageCalValuesF1); // REMOVE HARDCODE
+		  sdhdf_loadPCM(polCal,&nPolCalChan,"parkes","UWL",pcmFile,averageCal,averageCalValuesF0,averageCalValuesF1,pcmClear); // REMOVE HARDCODE
 		  sdhdf_formPCM_response(polCal,nPolCalChan);
 		  
 		  
@@ -432,14 +435,14 @@ int main(int argc,char *argv[])
 		    }
 		  
 		  sdhdf_writeSpectrumData(outFile,inFile->beamHeader[b].label,inFile->beam[b].bandHeader[j].label,b,j, out_data,out_freq,ndump,nchan,1,npol,ndump,0,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
-		  sdhdf_writeObsParams(outFile,inFile->beam[b].bandHeader[j].label,inFile->beamHeader[b].label,j,outObsParams,ndump,1);
+		  sdhdf_writeObsParams(outFile,inFile->beam[b].bandHeader[j].label,inFile->beamHeader[b].label,j,outObsParams,ndump,1,inFile->primary[0].hdr_defn_version);
 		  sdhdf_writeDataWeights(outFile,b,j,dataWts,nchan,ndump,inFile->beamHeader[b].label,inFile->beam[b].bandHeader[j].label);
 		  sdhdf_releaseBandData(inFile,b,j,1); 		      
 		  free(out_freq); free(out_data); free(dataWts);
 		  free(outObsParams);
 
 		}
-	      sdhdf_writeBandHeader(outFile,inBandParams,inFile->beamHeader[b].label,inFile->beam[b].nBand,1);
+	      sdhdf_writeBandHeader(outFile,inBandParams,inFile->beamHeader[b].label,inFile->beam[b].nBand,1,inFile->primary[0].hdr_defn_version);
 	      free(inBandParams);
 
 	    }

@@ -133,6 +133,7 @@ bin_PROGRAMS += sdhdf_primaryFluxCal \
   sdhdf_flag \
   sdhdf_plotScan \
   sdhdf_plotWide \
+  sdhdf_plotBeams \
   sdhdf_plotMultiSpec \
   sdhdf_map \
   sdhdf_weightSpectra \
@@ -185,6 +186,9 @@ sdhdf_statistics_SOURCES = sdhdf_statistics.c \
   $(COMMON_SRCS)
 
 sdhdf_plotWide_SOURCES = sdhdf_plotWide.c \
+  $(COMMON_SRCS)
+
+sdhdf_plotBeams_SOURCES = sdhdf_plotBeams.c \
   $(COMMON_SRCS)
 
 sdhdf_plotMultiSpec_SOURCES = sdhdf_plotMultiSpec.c \

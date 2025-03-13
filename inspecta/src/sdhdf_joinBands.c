@@ -177,10 +177,10 @@ int main(int argc,char *argv[])
 	  if (haveFlags==1)
 	    sdhdf_writeFlags(outFile,b,i,out_flags,inFile0->beam[b].bandHeader[i].nchan,nDumpOut,inFile->beamHeader[b].label,outBandParams[i].label);
 
-	  sdhdf_writeObsParams(outFile,outBandParams[i].label,inFile0->beamHeader[b].label,i,outObsParams,nDumpOut,1);
+	  sdhdf_writeObsParams(outFile,outBandParams[i].label,inFile0->beamHeader[b].label,i,outObsParams,nDumpOut,1,inFile->primary[0].hdr_defn_version);
 	  free(outObsParams);	  
 	}
-      sdhdf_writeBandHeader(outFile,outBandParams,inFile0->beamHeader[b].label,nOutBands,1);
+      sdhdf_writeBandHeader(outFile,outBandParams,inFile0->beamHeader[b].label,nOutBands,1,inFile->primary[0].hdr_defn_version);
       free(outBandParams);
     }
   sdhdf_addHistory(inFile0->history,inFile0->nHistory,"sdhdf_join","INSPECTA software to combine files",args);

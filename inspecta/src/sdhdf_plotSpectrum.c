@@ -101,6 +101,7 @@ int main(int argc,char *argv[])
   char dataName[MAX_STRLEN];
   int ibeam=0;
   char grDev[128]="/xs";
+  int verbose=0;
   
   //  help();
   
@@ -122,6 +123,7 @@ int main(int argc,char *argv[])
       else if (strcmp(argv[i],"-g")==0)      strcpy(grDev,argv[++i]);
       else if (strcmp(argv[i],"-beam")==0)   sscanf(argv[++i],"%d",&ibeam);
       else if (strcmp(argv[i],"-sd")==0)     sscanf(argv[++i],"%d",&idump);
+      else if (strcmp(argv[i],"-v")==0)      verbose=1;
       else if (strcmp(argv[i],"-sb")==0) // FIX ME - ENABLE BAND DESCRIPTORS
 	sscanf(argv[++i],"%d",&iband);
     }
@@ -141,7 +143,9 @@ int main(int argc,char *argv[])
       free(inFile);
       exit(1);
     }
+  if (verbose==1) printf("Loading meta data\n");
   sdhdf_loadMetaData(inFile);
+  if (verbose==1) printf("Completed meta data\n");
   printf("%-22.22s %-22.22s %-5.5s %-6.6s %-20.20s %-10.10s %-10.10s %-7.7s %3d\n",fname,inFile->primary[0].utc0,
 	 inFile->primary[0].hdr_defn_version,inFile->primary[0].pid,inFile->beamHeader[ibeam].source,inFile->primary[0].telescope,
 	 inFile->primary[0].observer, inFile->primary[0].rcvr,inFile->beam[ibeam].nBand);
@@ -260,7 +264,8 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam,int iband,int idump,double 
 		      int kk;
 		      for (kk=0;kk<inFile->beam[ibeam].bandData[iband].nAstro_obsHeaderAttributes;kk++)
 			{
-			  if (strcmp(inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr[kk].key,"UNIT")==0)
+			  // Change .key to .name
+			  if (strcmp(inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr[kk].name,"UNIT")==0)
 			    {strcpy(yUnit,inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr[kk].value); break;}
 			}
 		    }
@@ -274,9 +279,11 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam,int iband,int idump,double 
 		      for (kk=0;kk<inFile->beam[ibeam].bandData[iband].nAstro_obsHeaderAttributes_freq;kk++)
 			{
 			  //			  printf("Checking attribute %s\n",inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr_freq[kk].key);
-			  if (strcmp(inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr_freq[kk].key,"FRAME")==0)
+
+			  // GEORGE: THIS .name was .key **
+			  if (strcmp(inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr_freq[kk].name,"FRAME")==0)
 			    {strcpy(freqFrame,inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr_freq[kk].value);}
-			  else if (strcmp(inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr_freq[kk].key,"UNIT")==0)		    
+			  else if (strcmp(inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr_freq[kk].name,"UNIT")==0)		    
 			    {
 			      //			      printf("Value = %s\n",inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr_freq[kk].value);
 			      strcpy(freqUnit,inFile->beam[ibeam].bandData[iband].astro_obsHeaderAttr_freq[kk].value);
@@ -496,7 +503,7 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam,int iband,int idump,double 
 		  cpgsci(1); cpgline(i-1-i0,freq+i0,pol1+i0); cpgsci(1);
 		  if (npol > 1)
 		    {
-		      cpgsci(6); cpgline(i-1-i0,freq+i0,pol2+i0); cpgsci(1);
+		      cpgsci(2); cpgline(i-1-i0,freq+i0,pol2+i0); cpgsci(1);
 		    }
 		  drawIt=-1;
 
@@ -507,7 +514,7 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam,int iband,int idump,double 
 	      cpgsci(1); cpgline(i-1-i0,freq+i0,pol1+i0); cpgsci(1);
 	      if (npol > 1)
 		{
-		  cpgsci(6); cpgline(i-1-i0,freq+i0,pol2+i0); cpgsci(1);
+		  cpgsci(2); cpgline(i-1-i0,freq+i0,pol2+i0); cpgsci(1);
 		}
 	    }
 	}
@@ -516,7 +523,7 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam,int iband,int idump,double 
 	  cpgsci(1); cpgline(nchan,freq,pol1); cpgsci(1);
 	  if (npol > 1)
 	    {
-	      cpgsci(6); cpgline(nchan,freq,pol2); cpgsci(1);
+	      cpgsci(2); cpgline(nchan,freq,pol2); cpgsci(1);
 	    }
 	}
 

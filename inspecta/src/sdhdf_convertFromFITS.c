@@ -558,20 +558,20 @@ int main(int argc,char *argv[])
   sdhdf_openFile(outname,outFile,3);
 
   printf("B\n");
-  sdhdf_writeBeamHeader(outFile,beamHeader,nBeam);
+  sdhdf_writeBeamHeader(outFile,beamHeader,nBeam,(char *)"4.0");
   sdhdf_writePrimaryHeader(outFile,primaryHeader);
   printf("C\n");
   for (b=0;b<nBeam;b++)
     {
-      sdhdf_writeBandHeader(outFile,bandHeader,beamHeader[b].label,1,1);
-      sdhdf_writeObsParams(outFile,bandHeader[0].label,beamHeader[b].label,0,obsParams,ndump,1);
+      sdhdf_writeBandHeader(outFile,bandHeader,beamHeader[b].label,1,1,(char *)"4.0");
+      sdhdf_writeObsParams(outFile,bandHeader[0].label,beamHeader[b].label,0,obsParams,ndump,1,(char *)"4.0");
       // FIX ME: Only sending 1 frequency channel through
       printf("Number of bins = %d\n",nbin);
       sdhdf_writeSpectrumData(outFile,beamHeader[b].label,bandHeader->label,b,0,floatVals+b*nchan*npol*ndump,freqVals,1,nchan,nbin,npol,ndump,1,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
       if (cal==1)
 	{
-	  sdhdf_writeBandHeader(outFile,calBandHeader,beamHeader[b].label,1,2);
-	  sdhdf_writeObsParams(outFile,bandHeader[0].label,beamHeader[b].label,0,obsParams,ndump_cal,2);
+	  sdhdf_writeBandHeader(outFile,calBandHeader,beamHeader[b].label,1,2,(char *)"4.0");
+	  sdhdf_writeObsParams(outFile,bandHeader[0].label,beamHeader[b].label,0,obsParams,ndump_cal,2,(char *)"4.0");
 	  printf("In here\n");
 	  // GEORGE HERE:
 	  // ... need to setup and then write the cal metadata

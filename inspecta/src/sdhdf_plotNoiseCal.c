@@ -587,11 +587,11 @@ void doPlot(sdhdf_fileStruct *inFile,int beam,int totChan,int nScal,float *scalF
     cpgsci(1); cpgline(np,fx,fy1);
     if (nLine == 2)
       {
-	cpgsci(6); cpgline(np,fx,fy2);
+	cpgsci(2); cpgline(np,fx,fy2);
       }
     else if (nLine==4)
       {
-	cpgsci(6); cpgline(np,fx,fy2);
+	cpgsci(2); cpgline(np,fx,fy2);
 	cpgsci(3); cpgline(np,fx,fy3);
 	cpgsci(4); cpgline(np,fx,fy4);
       }

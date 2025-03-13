@@ -208,15 +208,15 @@ int main(int argc,char *argv[])
 		      printf("Copying band: %d %d\n",i,copyBand);
 		      if (copyBand==1)
 			{
-			  sprintf(groupName,"beam_%d",b);
-
+			  //			  sprintf(groupName,"beam_%d",b);
+			  strcpy(groupName,inFile->beamHeader[b].label);
 			  if (sdhdf_checkGroupExists(outFile,groupName) == 1)
 			    {
 			      hid_t group_id;
 			      group_id = H5Gcreate2(outFile->fileID,groupName,H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);
 			      status = H5Gclose(group_id);
 			    }
-			  sprintf(groupName,"beam_%d/%s",b,inFile->beam[b].bandHeader[i].label);
+			  sprintf(groupName,"%s/%s",inFile->beamHeader[b].label,inFile->beam[b].bandHeader[i].label);
 			  sdhdf_copyEntireGroup(groupName,inFile,outFile);
 
 			  strcpy(outBandParams[nBand].label,inBandParams[i].label);
@@ -351,15 +351,15 @@ int main(int argc,char *argv[])
 
 		      // FIX ME: Only sending 1 frequency channel through
 		      sdhdf_writeSpectrumData(outFile,inFile->beamHeader[b].label,outBandParams[j].label,b,j,outVals,freqVals,1,totNchan,1,npol,outBandParams[j].ndump,0,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
-		      sdhdf_writeObsParams(outFile,outBandParams[j].label,inFile->beamHeader[b].label,j,outObsParams,outBandParams[j].ndump,1);
+		      sdhdf_writeObsParams(outFile,outBandParams[j].label,inFile->beamHeader[b].label,j,outObsParams,outBandParams[j].ndump,1,inFile->primary[0].hdr_defn_version);
 		    
 		      sprintf(groupName1,"beam_%d/%s/metadata/cal_obs_params",b,inFile->beam[b].bandHeader[selectBandID].label);
 		      sprintf(groupName2,"beam_%d/%s/metadata/cal_obs_params",b,outBandParams[j].label);
 		      sdhdf_copyEntireGroupDifferentLabels(groupName1,inFile,groupName2,outFile);
 		      //    sdhdf_writeObsParams(outFile,outBandParams[j].label,b,j,outCalObsParams,outCalBandParams[j].ndump,2); 
-		    
-		      sprintf(groupName1,"beam_%d/%s/calibrator_data",b,inFile->beam[b].bandHeader[selectBandID].label);
-		      sprintf(groupName2,"beam_%d/%s/calibrator_data",b,outBandParams[j].label);
+
+		      sprintf(groupName1,"%s/%s/calibrator_data",inFile->beamHeader[b].label,inFile->beam[b].bandHeader[selectBandID].label);
+		      sprintf(groupName2,"%s/%s/calibrator_data",inFile->beamHeader[b].label,outBandParams[j].label);
 		      printf("Copying %s to %s\n",groupName1,groupName2);
 		      sdhdf_copyEntireGroupDifferentLabels(groupName1,inFile,groupName2,outFile);
 		      
@@ -372,10 +372,10 @@ int main(int argc,char *argv[])
 		    }
 
 		}
-	      sdhdf_writeBandHeader(outFile,outBandParams,inFile->beamHeader[b].label,nSelectBands,1);
+	      sdhdf_writeBandHeader(outFile,outBandParams,inFile->beamHeader[b].label,nSelectBands,1,inFile->primary[0].hdr_defn_version);
 
 	      if (cal==1)
-		sdhdf_writeBandHeader(outFile,outCalBandParams,inFile->beamHeader[b].label,nSelectBands,2);
+		sdhdf_writeBandHeader(outFile,outCalBandParams,inFile->beamHeader[b].label,nSelectBands,2,inFile->primary[0].hdr_defn_version);
 
 	      
 	      //	      sprintf(groupName,"beam_%d/metadata",b);
@@ -387,7 +387,7 @@ int main(int argc,char *argv[])
        
 	  // Copy other primary tables
 	  sdhdf_copyEntireGroup("metadata",inFile,outFile);	      	      
-	  sdhdf_writeBeamHeader(outFile,inFile->beamHeader,inFile->nBeam); 
+	  sdhdf_writeBeamHeader(outFile,inFile->beamHeader,inFile->nBeam,inFile->primary[0].hdr_defn_version);
 	  // Don't want to "copyRemainder" as have only selected specific bands
 	  sdhdf_copyEntireGroup("config",inFile,outFile);
 	  sdhdf_addHistory(inFile->history,inFile->nHistory,"sdhdf_extractBand","INSPECTA software to extractBands",args);
@@ -409,6 +409,5 @@ int main(int argc,char *argv[])
   free(inFile);
   free(outFile);
 }
-
 
 

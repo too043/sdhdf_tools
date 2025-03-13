@@ -364,7 +364,7 @@ int main(int argc,char *argv[])
       beamHeader[i].nBand = nband;
       strcpy(beamHeader[i].source,params->beam[i].src); 
     }
-  sdhdf_writeBeamHeader(outFile,beamHeader,nbeam);
+  sdhdf_writeBeamHeader(outFile,beamHeader,nbeam,(char *)"4.0");
 
   // Write the primary header
   strcpy(primaryHeader[0].date,"unknown");
@@ -530,7 +530,7 @@ int main(int argc,char *argv[])
 		  data[k*nchan*npol + 3*nchan + ii] = sqrt(noiseScaleAA*noiseScaleBB)*TKgaussDev(&iseed);
 	    }
 	}
-      sdhdf_writeObsParams(outFile,bandHeader[j].label,beamHeader[i].label,j,obsParams,ndump,1);			       
+	  sdhdf_writeObsParams(outFile,bandHeader[j].label,beamHeader[i].label,j,obsParams,ndump,1,(char *)"4.0");			       
       free(obsParams);
       free(spectrumAdd);
 	  // SHOULD SET UP ATTRIBUTES
@@ -540,7 +540,7 @@ int main(int argc,char *argv[])
 	  free(data);
 
 	}
-      sdhdf_writeBandHeader(outFile,bandHeader,beamHeader[i].label,nband,1);
+      sdhdf_writeBandHeader(outFile,bandHeader,beamHeader[i].label,nband,1,(char *)"4.0");
     
       free(bandHeader);
 

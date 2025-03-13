@@ -6,6 +6,7 @@ __author__ = ["Danny Price", "Alec Thomson"]
 
 import pandas as pd
 import h5py
+from astropy.table import QTable
 
 # Ignore astropy warnings
 import warnings
@@ -15,7 +16,7 @@ warnings.filterwarnings('ignore', category=Warning, append=True)
 class SDHDFAttribute:
 
     def __init__(self, sdhdf_dataset: h5py.Dataset, *args, **kwargs):
-        """Read SDHF attributes
+        """Read SDHDF attributes
 
         Args:
             sdhdf_dataset (h5py.Dataset): SDHDF table dataset

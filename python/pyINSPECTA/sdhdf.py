@@ -43,7 +43,10 @@ def _get_sdhdf_version(filename: Path) -> tuple[float, Path]:
         version = None
         for hdr_key in hdr_keys:
             if hdr_key in primary_header:
-                version = float(primary_header[hdr_key])
+                if '1.9' in str(primary_header[hdr_key]):
+                    version = float('1.9')
+                else:
+                    version = float(primary_header[hdr_key])
 
         if version is None:
             raise ValueError(f"SDHDF version not found in file '{filename}'")
@@ -51,11 +54,11 @@ def _get_sdhdf_version(filename: Path) -> tuple[float, Path]:
             version = 2.0
         elif (version > 2.0) and (version <= 2.1):
             version = 2.1
-        elif (version > 2.2) and (version <= 2.9):
+        elif (version >= 2.2) and (version <= 2.9):
             version = 2.9
 
         try:
-            with resources.path("pyINPSECTA", "definitions") as definition_dir:
+            with resources.path("pyINSPECTA", "definitions") as definition_dir:
                 definition_file = definition_dir / f"sdhdf_def_v{version}.json"
         except ValueError as e:
             raise ValueError(f"SDHDF definition template {definition_file} not found.") from e
@@ -121,6 +124,7 @@ class MetaData:
             h5file (h5py.File): h5py file object
         """        
         for key, val in def_values.items():
+            #print(key, val)
             self._set_attributes(key, val, base_path, h5file)
 
     def _set_attributes(self, key: str, val: str | dict, base_path: str, h5file: h5py.File) -> None:
@@ -461,7 +465,9 @@ class SubBand:
         )
         # Set chunks for parallel processing
         chunks = {d: 1 for d in data_xr_flg.dims}
-        chunks["channel"] = len(self.astronomy_dataset.data.channel)
+        print(chunks) #{'time': 1, 'polarization': 1, 'frequency': 1, 'bin': 1}
+        #chunks["channel"] = len(self.astronomy_dataset.data.channel)
+        chunks["channel"] = len(self.astronomy_dataset.data.frequency)
         data_xr_flg = data_xr_flg.chunk(chunks)
         mask = (
             xr.DataArray(

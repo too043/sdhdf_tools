@@ -436,6 +436,7 @@ class SubBand:
             flag (bool, optional): Blank flagged data. Defaults to False.
         """
         sub_data = self.astronomy_dataset.isel(polarization=polarization,)
+        print(sub_data)
         if flag:
             sub_data = sub_data.where(sub_data.flag == 0)
         sub_data.data.plot(x="frequency", **plot_kwargs)
@@ -463,11 +464,10 @@ class SubBand:
         data_xr_flg = self.astronomy_dataset.data.where(
             ~self.astronomy_dataset.flag.astype(bool)
         )
+        print(data_xr_flg)
         # Set chunks for parallel processing
         chunks = {d: 1 for d in data_xr_flg.dims}
-        print(chunks) #{'time': 1, 'polarization': 1, 'frequency': 1, 'bin': 1}
-        #chunks["channel"] = len(self.astronomy_dataset.data.channel)
-        chunks["channel"] = len(self.astronomy_dataset.data.frequency)
+        chunks["frequency"] = len(self.astronomy_dataset.data.frequency)
         data_xr_flg = data_xr_flg.chunk(chunks)
         mask = (
             xr.DataArray(

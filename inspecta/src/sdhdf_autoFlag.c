@@ -54,17 +54,17 @@ void help()
   printf("Software to conduct automatic RFI flagging of SDHDF files\n");
 
   printf("\nCommand line arguments:\n\n");
-	printf("-h                  This help\n");
+  printf("-h                  This help\n");
   printf("-e <extension>      Output file extension\n");
   printf("-persistent         Flag persistent RFI\n");
-	printf("-transient          Flag transient RFI\n");
+  printf("-transient          Flag transient RFI\n");
   printf("-autoFlagDump       ?? \n");
   printf("-flag               ?? \n");
 
-	printf("\nExample:\n\n");
+  printf("\nExample:\n\n");
   printf("sdhdf_autoFlag -e flag -persistent file.hdf\n\n");
 
-	exit(1);
+  exit(1);
 }
 
 int main(int argc,char *argv[])

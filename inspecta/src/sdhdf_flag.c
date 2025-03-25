@@ -54,7 +54,7 @@ void help()
   printf("Author:           George Hobbs\n");
   printf("Software to flag a spectrum interactively\n");
 
-  printf("\n\nCommand line arguments:\n\n");
+  printf("\nCommand line arguments:\n\n");
   printf("-h                   This help\n");
   printf("-f <string>          Input file name\n");
   printf("-setnband <number>   Set the maximum number of sub-bands to process\n");

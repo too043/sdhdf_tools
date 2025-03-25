@@ -39,17 +39,17 @@ void createDataForAstro(fitsfile *astro,sdhdf_fileStruct *inFile,int fixFreq);
 void help()
 {
   printf("sdhdf_convertToPSRFITS: %s\n",VNUM);
-  printf("sdhfProc version:   %s\n",SOFTWARE_VER);
-  printf("author:             George Hobbs\n");
-  printf("\n");
-  printf("\n\nCommand line arguments:\n\n");
+  printf("INSPECTA version:   %s\n",SOFTWARE_VER);
+  printf("Author:             George Hobbs\n");
+  printf("Software to convert an SDHDF file to PSRFITS\n");
+
+  printf("\nCommand line arguments:\n\n");
   printf("-h                  This help\n");
   printf("-f <filename>       Filename to convert\n");
   printf("-o <filename>       Output filename\n");
-  printf("\n");
 
   printf("\nExample:\n\n");
-  printf("sdhdf_convertToPSRFITS -f <filename.hdf> -o <filename> \n");
+  printf("sdhdf_convertToPSRFITS -f <filename.hdf> -o <filename> \n\n");
   
   exit(1);
 }

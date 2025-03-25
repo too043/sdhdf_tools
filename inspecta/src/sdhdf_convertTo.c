@@ -30,10 +30,11 @@
 void help()
 {
   printf("sdhdf_convertTo: %s\n",VNUM);
-  printf("sdhfProc version:   %s\n",SOFTWARE_VER);
-  printf("author:             George Hobbs\n");
-  printf("\n");
-  printf("\n\nCommand line arguments:\n\n");
+  printf("INSPECTA version:   %s\n",SOFTWARE_VER);
+  printf("Author:             George Hobbs\n");
+  printf("Software to convert an SDHDF file to other formats\n");
+
+  printf("\nCommand line arguments:\n\n");
   printf("-h                  This help\n");
   printf("-band <integer>     Sub-band selection (starting from 0 for the first subband in the file)\n");
   printf("-e <string>         Output file extension (defaults to sdfits)  (note that this is not used if the -o option is set)\n");
@@ -41,10 +42,9 @@ void help()
   printf("-noXpol             Do not output cross polarisation terms\n");
   printf("-srcName <from> <to> Changes source names from <from> to <to>\n");
   printf("<filename>          SDHDF file corresponding to observations\n");
-  printf("\n");
 
   printf("\nExample:\n\n");
-  printf("sdhdf_convertTo <filename.hdf>\n");
+  printf("sdhdf_convertTo <filename.hdf>\n\n");
 
   exit(1);
 }

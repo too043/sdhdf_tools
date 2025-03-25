@@ -24,12 +24,26 @@
 #include "inspecta.h"
 #include "hdf5.h"
 
-#define VNUM "v0.1"
+#define VNUM "v2.0"
 
 void help()
 {
-}
+  printf("sdhdf_fluxDensity: %s\n",VNUM);
+  printf("INSPECTA version:   %s\n",SOFTWARE_VER);
+  printf("Author:             George Hobbs\n");
+  printf("Software to create flux density scaling factors\n");
 
+  printf("\nCommand line arguments:\n\n");
+  printf("-h                  This help\n");
+  printf("-f <filename>       Filename to read\n");
+  printf("-o <filename>       Output filename\n");
+  printf("-src <source_name>  Flux calibrator to use\n");
+
+  printf("\nExample:\n\n");
+  printf("sdhdf_fluxDensity -f <filename.hdf> -o <filename>\n\n");
+  
+  exit(1);
+}
 
 int main(int argc,char *argv[])
 {
@@ -47,6 +61,7 @@ int main(int argc,char *argv[])
   FILE *fout;
   
   // help();
+  if (argc==1) help();
 
   if (!(inFile = (sdhdf_fileStruct *)malloc(sizeof(sdhdf_fileStruct))))
     {

@@ -34,6 +34,7 @@
 #include "inspecta.h"
 #include "TKfit.h"
 
+#define VNUM "v2.0"
 #define VERSION "v0.5"
 #define MAX_POL_CAL_CHAN 4096    // FIX ME -- SHOULD SET DYNAMICALLY
 
@@ -41,18 +42,20 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 
 void help()
 {
-  printf("sdhdf_calibrate %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
-  printf("Authors: G. Hobbs\n");
-  printf("Purpose: to calibrate the data sets\n");
-  printf("\n");
-  printf("Command line arguments:\n\n");
-  printf("-e <ext>    Output file extension\n");
-  printf("-h          This help\n");
-  printf("\n\n");
-  printf("Example: sdhdf_calibrate -e cal uwl_*.hdf.T.f1024\n");
+  printf("\nsdhdf_calibrate:  %s\n",VNUM);
+  printf("INSPECTA version: %s\n",SOFTWARE_VER);
+  printf("Authors:          G. Hobbs\n");
+  printf("Software to calibrate SDHDF files\n");
+
+  printf("\nCommand line arguments:\n\n");
+  printf("-h                This help\n");
+  printf("-e <ext>          Output file extension\n");
+
+  printf("\nExample:\n\n");
+  printf("sdhdf_calibrate -e cal uwl_*.hdf.T.f1024\n\n");
+
   exit(1);
 }
-
 
 int main(int argc,char *argv[])
 {
@@ -79,6 +82,9 @@ int main(int argc,char *argv[])
   strcpy(extension,"calibrate");
 
   sdhdf_storeArguments(args,MAX_ARGLEN,argc,argv);
+
+  if (argc==1)
+	help();
   
   for (i=1;i<argc;i++)
     {

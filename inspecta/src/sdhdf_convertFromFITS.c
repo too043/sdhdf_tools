@@ -23,23 +23,30 @@
 #include "inspecta.h"
 #include "hdf5.h"
 
-#define VNUM "v0.1"
+#define VNUM "v2.0"
 
 void help()
 {
-  printf("sdhdf_convertFromFITS\n\n");
-  printf("Routine to convert FITS files to SDHDF\n");
-  printf("\n\n");
-  printf("-bin <bin>           Choice of phase bin for PSRFITS input files\n");
-  printf("-cal <filaname>      Obtain noise source information from specified file\n");
-  printf("-calOff <bin1> <bin2> Phase bins for the noise source OFF range\n");    
-  printf("-calOn <bin1> <bin2> Phase bins for the noise source ON range\n");    
-  printf("-f <filename>        FITS filename for conversion\n");
-  printf("-h                   This help\n");
-  printf("-o <filename>        Output filename\n");
-  printf("-pulseOff <bin1> <bin2> Phase bins for the pulse OFF (baseline)\n");    
-  printf("-type <type>         Type = 1 = SDFITS (default), 2 = PSRFITS\n");
+  printf("\nsdhdf_convertFromFITS   %s\n",VNUM);
+	printf("INSPECTA version:       %s\n",SOFTWARE_VER);
+  printf("Author:                 George Hobbs\n");
+  printf("Software to convert a FITS file to SDHDF format\n");
 
+  printf("\nCommand line arguments:\n\n");
+	printf("-h                      This help\n");
+	printf("-bin <bin>              Choice of phase bin for PSRFITS input files\n");
+  printf("-cal <filaname>         Obtain noise source information from specified file\n");
+  printf("-calOff <bin1> <bin2>   Phase bins for the noise source OFF range\n");
+  printf("-calOn <bin1> <bin2>    Phase bins for the noise source ON range\n");
+  printf("-f <filename>           Filename to convert\n");
+  printf("-o <filename>           Output filename\n");
+  printf("-pulseOff <bin1> <bin2> Phase bins for the pulse OFF (baseline)\n");
+  printf("-type <type>            Type = 1 = SDFITS (default), 2 = PSRFITS\n");
+
+	printf("\nExample:\n\n");
+  printf("sdhdf_convertFromFITS -f in.fits -o out.hdf\n\n");
+
+  exit(1);
 }
 
 int main(int argc,char *argv[])
@@ -134,6 +141,9 @@ int main(int argc,char *argv[])
   
   sdhdf_setMetadataDefaults(primaryHeader,beamHeader,bandHeader,softwareVersions,history,1,1);
 
+  if (argc==1)
+    help();
+    
   for (i=1;i<argc;i++)
     {
       if (strcmp(argv[i],"-f")==0)

@@ -29,17 +29,24 @@
 #include "inspecta.h"
 #include "hdf5.h"
 
+#define VNUM "v2.0"
 #define MAX_BANDS 26     // FIX THIS
 
 void help()
 {
-  printf("sdhdf_extractBand\n");
-  printf("\n");
-  printf("Command line arguments\n\n");
-  printf("-e <ext>          file extension for output files\n");
-  printf("-h                this help\n");
-  printf("-zoom <f1> <f2>   produce zoom band between f1 and f2 MHz\n");
-  printf("-b <bandLabel>    select sub-band with label (if the label is not found then it assumes a band number)\n");
+  printf("\nsdhdf_extractBand: %s\n",VNUM);
+  printf("INSPECTA version:  %s\n",SOFTWARE_VER);
+  printf("Authors:           G. Hobbs\n");
+  printf("Software to extract frequency bands from SDHDF files\n");
+
+  printf("\nCommand line arguments\n\n");
+  printf("-h                 This help\n");
+  printf("-e <ext>           file extension for output files\n");
+  printf("-zoom <f1> <f2>    produce zoom band between f1 and f2 MHz\n");
+  printf("-b <bandLabel>     select sub-band with label (if the label is not found then it assumes a band number)\n");
+
+  printf("\nExample:\n\n");
+  printf("sdhdf_extractBand -e eB -b 5 file.hdf\n\n");
 
   exit(1);
 }
@@ -79,6 +86,7 @@ int main(int argc,char *argv[])
 
   if (argc==1)
     help();
+	
   sdhdf_storeArguments(args,MAX_ARGLEN,argc,argv);
   for (i=1;i<argc;i++)
     {

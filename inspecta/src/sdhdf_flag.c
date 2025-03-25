@@ -32,6 +32,7 @@
 #include <cpgplot.h>
 #include "TKfit.h"
 
+#define VNUM "v2.0"
 #define MAX_RFI 512
 
 void doPlot(sdhdf_fileStruct *inFile,int ibeam);
@@ -48,15 +49,14 @@ void flagChannels(sdhdf_fileStruct *inFile,int ibeam,float *f0,float *f1,int nT,
 
 void help()
 {
-  printf("sdhdf_flag\n");
-  printf("sdhfProc version:   %s\n",SOFTWARE_VER);
-  printf("author:             George Hobbs\n");
-  printf("\n");
-  printf("Software to flag a spectrum in an interactive matter\n");
-  printf("\n\nCommand line arguments:\n\n");
+  printf("\nsdhdf_flag        %s\n",VNUM);
+	printf("INSPECTA version: %s\n",SOFTWARE_VER);
+  printf("Author:           George Hobbs\n");
+  printf("Software to flag a spectrum interactively\n");
 
-  printf("-f <string>          Input file name\n");
+  printf("\n\nCommand line arguments:\n\n");
   printf("-h                   This help\n");
+  printf("-f <string>          Input file name\n");
   printf("-setnband <number>   Set the maximum number of sub-bands to process\n");
   printf("-sb <number>         Set the band number for the initial plot (starting from 0)   [can also use -band instead of -sb]\n");
 
@@ -99,6 +99,11 @@ int main(int argc,char *argv[])
   //  spectralDumpStruct spectrum;
   int npol=4;
   int setnband=-1;
+
+  if (argc==1) {
+	  help();
+		exit(1);
+	}
   
   if (!(inFile = (sdhdf_fileStruct *)malloc(sizeof(sdhdf_fileStruct))))
     {

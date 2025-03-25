@@ -31,7 +31,7 @@
 #include "hdf5.h"
 #include <cpgplot.h>
 
-#define VNUM "v0.1"
+#define VNUM "v2.0"
 #define MAX_HLINE 16
 #define MAX_VLINE 16
 
@@ -41,20 +41,18 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam, int iband,int idump,char *
 
 void help()
 {
-  printf("sdhdf_plotMultiSpec: %s\n",VNUM);
-  printf("sdhfProc version:   %s\n",SOFTWARE_VER);
-  printf("author:             George Hobbs\n");
-  printf("\n");
+  printf("sdhdf_plotMultiSpec %s\n",VNUM);
+  printf("INSPECTA version:   %s\n",SOFTWARE_VER);
+  printf("Author:             George Hobbs\n");
   printf("Software to plot multiple spectra\n");
+
   printf("\n\nCommand line arguments:\n\n");
-
-
+  printf("-h                  This help\n");
   printf("-4pol               Plot 4 polarisations (default is just 1 or 2 polarisation)\n");
   printf("-av <av>            Frequency average this number of channels\n");
   printf("-beam <val>         Select beam number\n");
   printf("-bl <f0> <f1>       Set baseline between f0 and f1 MHz\n");
   printf("-ch <chSize>        Character size\n");
-  printf("-h                  This help\n");
   printf("-f0 <freq0>         Start frequency (should be within specified band)\n");
   printf("-f1 <freq1>         End frequency (should be within specified band)\n");
   printf("-f <filename>       SDHDF file corresponding to observations\n");
@@ -79,10 +77,10 @@ void help()
   printf("-ylabel <str>       Label to display on y-axis\n");
   printf("-yscale <val>       Scale (multiply) the values in the spectra by val\n");
   
-  
   printf("\nExample:\n\n");
   printf("sdhdf_plotMultiSpec -sb 0 -f0 810 -f1 812 uwl_210722_214441.hdf.T.flag\n");
-  printf("---------------------\n");
+  
+  exit(1);
 }
 
 
@@ -143,6 +141,9 @@ int main(int argc,char *argv[])
     }
 
   sdhdf_initialiseFile(inFile);
+
+  if (argc==1)
+    help();
   
   for (i=1;i<argc;i++)
     {      

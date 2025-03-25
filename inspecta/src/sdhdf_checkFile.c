@@ -29,7 +29,7 @@
 #include <math.h>
 #include "inspecta.h"
 
-#define VERSION "v1.0"
+#define VNUM "v2.0"
 #define MAX_HISTORY_LOG 512
 #define MAX_COMMANDS 16
 
@@ -47,16 +47,18 @@ typedef struct historyLogStruct {
 
 void help()
 {
-  printf("sdhdf_checkFile %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
-  printf("Authors: G. Hobbs\n");
+  printf("\nsdhdf_checkFile   %s\n",VNUM);
+	printf("INSPECTA version: %s\n",SOFTWARE_VER);
+  printf("Author:           George Hobbs\n");
+  printf("Software to provide a quick-look at the metadata in SDHDF files\n");
 
-  printf("\n\n");
-  printf("-h        This help\n");
-  printf("Filenames are given on the command line\n\n");
-  printf("Example\n");
-  printf("sdhdf_checkFile *.hdf\n");
+  printf("\nCommand line arguments:\n\n");
+	printf("-h                This help\n");
+
+	printf("\nExample:\n\n");
+  printf("sdhdf_checkFile *.hdf\n\n");
+
   exit(1);
-
 }
 
 int main(int argc,char *argv[])

@@ -30,6 +30,7 @@
 #include "inspecta.h"
 #include "hdf5.h"
 
+#define VNUM "v2.0"
 #define MAX_BANDS 26     // FIX THIS
 
 //
@@ -39,15 +40,21 @@
 
 void help()
 {
-  printf("sdhdf_extractDump\n\n");
-  printf("Routine to extract spectral dumps from an sdhdf file\n\n");
-  printf("-b <num>       Beam number\n");
-  printf("-d <num>       Spectral dump number to extract (note this can be used multiple times)\n");
-  printf("-e <ext>       Output file extension\n");
-  printf("-h             This help\n");
-  printf("\n\n");
-  printf("Filenames are listed on the command line. For example\n\n");
-  printf("sdhdf_extractDump -e extract -d 0 -d 5 -d 8 *.hdf\n");
+  printf("\nsdhdf_extractDump: %s\n",VNUM);
+  printf("INSPECTA version:    %s\n",SOFTWARE_VER);
+  printf("Authors:             G. Hobbs\n");
+  printf("Software to extract spectral dumps from SDHDF files\n");
+
+  printf("\nCommand line arguments\n\n");
+  printf("-h                   This help\n");
+  printf("-b <num>             Beam number\n");
+  printf("-d <num>             Spectral dump number to extract (note this can be used multiple times)\n");
+  printf("-e <ext>             Output file extension\n");
+
+  printf("\nExample:\n\n");
+  printf("sdhdf_extractDump -e eD -d 0 -d 5 -d 8 *.hdf\n\n");
+
+  exit(1);
 }
 
 int main(int argc,char *argv[])
@@ -94,7 +101,9 @@ int main(int argc,char *argv[])
       exit(1);
     }
   
-  
+  if (argc==1)
+    help();
+
   for (i=1;i<argc;i++)
     {      
       if (strcmp(argv[i],"-e")==0)

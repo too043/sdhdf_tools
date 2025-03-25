@@ -25,6 +25,24 @@
 #include "inspecta.h"
 #include "hdf5.h"
 
+#define VNUM "v2.0"
+
+void help()
+{
+  printf("\nsdhdf_applyCal    %s\n",VNUM);
+	printf("INSPECTA version: %s\n",SOFTWARE_VER);
+  printf("Author:           George Hobbs\n");
+  printf("Software to apply a calibration solution to an SDHDF file\n");
+
+  printf("\nCommand line arguments:\n\n");
+	printf("-h                This help\n");
+  printf("-e <ext>          Output file extension\n");
+
+	printf("\nExample:\n\n");
+  printf("sdhdf_applyCal -e cal file.hdf\n\n");
+
+  exit(1);
+}
 
 int main(int argc,char *argv[])
 {
@@ -58,6 +76,9 @@ int main(int argc,char *argv[])
       printf("ERROR: unable to allocate sufficient memory for >outFile<\n");
       exit(1);
     }
+
+	if (argc==1)
+	help();
 
   for (i=1;i<argc;i++)
     {

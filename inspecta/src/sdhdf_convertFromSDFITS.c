@@ -24,7 +24,7 @@
 #include "inspecta.h"
 #include "hdf5.h"
 
-#define VNUM "v0.1"
+#define VNUM "v2.0"
 
 double dms_turn(char *line);
 double hms_turn(char *line);
@@ -37,13 +37,20 @@ void slaCldj ( int iy, int im, int id, double *djm, int *j );
 
 void help()
 {
-  printf("sdhdf_convertFromSDFITS\n\n");
-  printf("Routine to convert SDFITS files to SDHDF\n");
-  printf("\n\n");
-  printf("-f <filename>        FITS filename for conversion\n");
-  printf("-h                   This help\n");
-  printf("-o <filename>        Output filename\n");
+  printf("\nsdhdf_convertFromSDFITS  %s\n",VNUM);
+	printf("INSPECTA version:        %s\n",SOFTWARE_VER);
+  printf("Author:                  George Hobbs\n");
+  printf("Software to convert an SDFITS file to SDHDF format\n");
 
+  printf("\nCommand line arguments:\n\n");
+	printf("-h                       This help\n");
+	printf("-f <filename>            Filename to convert\n");
+	printf("-o <filename>         Output filename\n");
+
+	printf("\nExample:\n\n");
+  printf("sdhdf_convertFromSDFITS -f file.hdf\n\n");
+
+  exit(1);
 }
 
 int main(int argc,char *argv[])
@@ -160,6 +167,9 @@ int main(int argc,char *argv[])
   int ret;
   
   // Read the command line arguments
+  if (argc==1)
+    help();
+    
   for (i=1;i<argc;i++)
     {
       if (strcmp(argv[i],"-f")==0)

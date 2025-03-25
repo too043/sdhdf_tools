@@ -29,31 +29,34 @@
 #include <math.h>
 #include "inspecta.h"
 
-#define VERSION "v0.5"
+#define VNUM "v2.0"
 
 void help()
 {
-  printf("sdhdf_quickdump %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
-  printf("Authors: G. Hobbs\n");
-  printf("Purpose: to present data within a file\n");
-  printf("\n");
-  printf("Command line arguments:\n\n");
+  printf("\nsdhdf_quickdump       %s\n",VNUM);
+  printf("INSPECTA version:     %s\n",SOFTWARE_VER);
+  printf("Author:               George Hobbs\n");
+  printf("Software to output text files of the data in SDHDF files\n");
+
+  printf("\nCommand line arguments:\n\n");
+  printf("-h                     This help\n");
   printf("-bandRange <b0> <b1>   Output data in bands between b0 and b1\n");
   printf("-cal                   Output calibration data\n");
   printf("-cal_tav               Average calibration data in time\n");
   printf("-cal32_ch <ch>         Set the channel to 'ch' when outputting data for the 32-bin cal\n");
-  printf("-cal32_tav             Average the 32-binned calibration signal in time before output\n");  
+  printf("-cal32_tav             Average the 32-binned calibration signal in time before output\n");
   printf("-calOnOff              Calculate ON-OFF for the noise source parameters\n");
   printf("-dumpRange <s0> <s1>   Output data in specificed sub-integration range\n");
   printf("-e <ext>               Output to data file with defined extension\n");
   printf("-fref <fref> Use 'fref' as a reference frequency and output velocities as well as frequencies\n");
   printf("-freqRange <f0> <f1>   Output data between f0 and f1 (in MHz)\n");
-  printf("-h                     this help\n");
   printf("-mjd                   Print dump time MJD in output\n");
   printf("-noflagged             Do not print out lines that have been flagged\n");
   printf("-stokes                Convert coherency products to Stokes (for calibrated data) or pseudo-Stokes (uncalibrated data)\n");
   printf("-tsys                  output system temperature measurements\n");
 
+  printf("\nExample:\n\n");
+  printf("sdhdf_quickdump file.hdf\n\n");
 
   exit(1);
 }
@@ -93,6 +96,9 @@ int main(int argc,char *argv[])
   double fref=-1;
   int cal_tav=-1;
   
+  if (argc==1)
+    help();
+	
   for (i=1;i<argc;i++)
     {
       if (strcmp(argv[i],"-h")==0)

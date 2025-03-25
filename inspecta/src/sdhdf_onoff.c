@@ -30,19 +30,19 @@
 #include "inspecta.h"
 #include "hdf5.h"
 
-#define VNUM "v0.1"
+#define VNUM "v2.0"
 #define MAX_FILES_BATCH 1024
 
 void help()
 {
-  printf("sdhdf_onoff:      %s\n",VNUM);
-  printf("sdhfProc version: %s\n",SOFTWARE_VER);
-  printf("author:           George Hobbs\n");
-  printf("\n");
+  printf("\nsdhdf_onoff       %s\n",VNUM);
+  printf("INSPECTA version: %s\n",SOFTWARE_VER);
+  printf("Author:           George Hobbs\n");
   printf("Software to produce (ON-OFF)/OFF spectra\n");
+
   printf("\n\nCommand line arguments:\n\n");
-  printf("-batch <filename> Read filenames from the file specified\n");
   printf("-h                This help\n");
+  printf("-batch <filename> Read filenames from the file specified\n");
   printf("-on <filename>    SDHDF file corresponding to 'ON' source pointing\n");
   printf("-off <filename>   SDHDF file corresponding to 'OFF' source pointing\n");
   printf("-o <filename>     Output SDHDF file containing (ON-OFF)/OFF\n");
@@ -50,7 +50,8 @@ void help()
   
   printf("\nExample:\n\n");
   printf("sdhdf_onoff -on on.hdf.T -off off.hdf.T -o diff.hdf\n");
-  printf("---------------------\n");
+  
+  exit(1);
 }
 
 void determineOffSourceScale(float *freqOffScl,float *offSclA,float *offSclB,int n,float freq,float *sclA2,float *sclB2);
@@ -100,6 +101,10 @@ int main(int argc,char *argv[])
   int procType=1;
   
   FILE *fout;
+
+  if (argc==1)
+    help();
+
   printf("Starting\n");
   // help();
 

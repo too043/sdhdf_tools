@@ -29,7 +29,7 @@
 #include "inspecta.h"
 #include "fitsio.h"
 
-#define VERSION "v0.5"
+#define VNUM "v2.0"
 
 void createPrimaryHeader(fitsfile *cal,fitsfile *psr,  sdhdf_fileStruct *inFile);
 void createSubintHeader(fitsfile *cal,fitsfile *psr,  sdhdf_fileStruct *inFile);
@@ -38,13 +38,21 @@ void createDataForAstro(fitsfile *astro,sdhdf_fileStruct *inFile,int fixFreq);
 
 void help()
 {
-  printf("sdhdf_convertToPSRFITS %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
-  printf("Authors: G. Hobbs\n");
+  printf("sdhdf_convertToPSRFITS: %s\n",VNUM);
+  printf("sdhfProc version:   %s\n",SOFTWARE_VER);
+  printf("author:             George Hobbs\n");
+  printf("\n");
+  printf("\n\nCommand line arguments:\n\n");
+  printf("-h                  This help\n");
+  printf("-f <filename>       Filename to convert\n");
+  printf("-o <filename>       Output filename\n");
+  printf("\n");
 
+  printf("\nExample:\n\n");
+  printf("sdhdf_convertToPSRFITS -f <filename.hdf> -o <filename> \n");
+  
   exit(1);
 }
-
-
 
 int main(int argc,char *argv[])
 {

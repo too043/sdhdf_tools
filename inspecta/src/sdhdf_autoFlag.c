@@ -37,6 +37,7 @@
 #include <cpgplot.h>
 #include "TKfit.h"
 
+#define VNUM "v2.0"
 #define MAX_RFI 512
 
 void flagDataPoint(sdhdf_fileStruct *inFile,int b,int i,int j,int s);
@@ -47,10 +48,24 @@ void flagNarrowRFI(sdhdf_fileStruct *inFile,int b,int i);
 
 void help()
 {
-  printf("sdhdf_autoFlag:   code to carry out automatic flagging of a data file\n");	 
-  exit(1);
-}
+  printf("\nsdhdf_autoFlag:     %s\n",VNUM);
+  printf("INSPECTA version:   %s\n",SOFTWARE_VER);
+  printf("Author:             George Hobbs\n");
+  printf("Software to conduct automatic RFI flagging of SDHDF files\n");
 
+  printf("\nCommand line arguments:\n\n");
+	printf("-h                  This help\n");
+  printf("-e <extension>      Output file extension\n");
+  printf("-persistent         Flag persistent RFI\n");
+	printf("-transient          Flag transient RFI\n");
+  printf("-autoFlagDump       ?? \n");
+  printf("-flag               ?? \n");
+
+	printf("\nExample:\n\n");
+  printf("sdhdf_autoFlag -e flag -persistent file.hdf\n\n");
+
+	exit(1);
+}
 
 int main(int argc,char *argv[])
 {
@@ -100,6 +115,10 @@ int main(int argc,char *argv[])
       printf("ERROR: unable to allocate sufficient memory for >outFile<\n");
       exit(1);
     }
+
+	if (argc==1)
+    help();
+
   sdhdf_storeArguments(args,MAX_ARGLEN,argc,argv);
   for (i=1;i<argc;i++)
     {      

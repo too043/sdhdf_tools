@@ -36,32 +36,29 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam,int iband,int idump,double 
 void drawMolecularLine(float freq,char *label,float minX,float maxX,float minY,float maxY,int drawLabel);
 void drawRecombLine(float minX,float maxX,float minY,float maxY);
 
-
-#define VNUM "v0.2"
+#define VNUM "v2.0"
 #define MAX_REST_FREQUENCIES 1024
 
 void help()
 {
-  printf("sdhdf_plotSpectrum: %s\n",VNUM);
+  printf("\nsdhdf_plotSpectrum: %s\n",VNUM);
   printf("sdhfProc version:   %s\n",SOFTWARE_VER);
-  printf("author:             George Hobbs\n");
-  printf("\n");
-  printf("Software to plot a spectrum in an interactive matter\n");
-  printf("\n\nCommand line arguments:\n\n");
+  printf("Author:             George Hobbs\n");
+  printf("Software to plot a spectrum from an SDHDF file interactively\n");
 
-  printf("-beam <num>         Set beam number\n");
-  printf("-f <filename>       SDHDF file corresponding to observation\n");
-  printf("-g <string>         PGPLOT graphical device\n");
+  printf("\nCommand line arguments:\n\n");
   printf("-h                  This help\n");
+  printf("-f <filename>       SDHDF file corresponding to observation\n");
+  printf("-beam <num>         Set beam number\n");
+  printf("-g <string>         PGPLOT graphical device\n");
   printf("-sb <num>           Set the sub-band number (starting from 0)\n");
   printf("-sd <num>           Set the spectral dump number (starting from 0)\n");
   printf("-yuint <string>     The text that will be written on the y-axis (by default this comes from the internal SDHDF attributes)\n");
-  
+
   printf("\nExample:\n\n");
-  printf("sdhdf_plotSpectrum -f diff.hdf -sb 0\n");
-  printf("---------------------\n");
-  printf("\n");
-  printf("The plot is interactive and the following key/mouse strokes can be used\n\n");
+  printf("sdhdf_plotSpectrum -f file.hdf -sb 0\n");
+
+  printf("\n\nThe plot is interactive and the following key/mouse strokes can be used\n\n");
   printf("Left mouse click or A  Display on the screen the current cursor position\n");
   printf(">                   Move to the next sub-band\n");
   printf("<                   Move to the previous sub-band\n");
@@ -82,9 +79,8 @@ void help()
   printf("u                   Unzoom - back to the original plot scales\n");
   printf("w                   Toggle dividing the spectra by the weights in the file\n");
   printf("x                   Toggle the x-axis\n");
-  printf("z                   Start a zoom region from the current mouse position, move the mouse and click to set the zoom region\n");
+  printf("z                   Start a zoom region from the current mouse position, move the mouse and click to set the zoom region\n\n");
 }
-
 
 int main(int argc,char *argv[])
 {
@@ -113,6 +109,11 @@ int main(int argc,char *argv[])
       printf("ERROR: unable to allocate sufficient memory for >inFile<\n");
       exit(1);
     }
+
+	if (argc==1) {
+		help();
+		  exit(1);
+	  }
 
   for (i=1;i<argc;i++)
     {      

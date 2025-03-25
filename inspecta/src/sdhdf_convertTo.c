@@ -24,10 +24,7 @@
 #include "hdf5.h"
 #include "fitsio.h"
 
-
-
-#define VNUM "v0.1"
-
+#define VNUM "v2.0"
 #define MAX_SRC_NAMES 16
 
 void help()
@@ -37,17 +34,17 @@ void help()
   printf("author:             George Hobbs\n");
   printf("\n");
   printf("\n\nCommand line arguments:\n\n");
+  printf("-h                  This help\n");
   printf("-band <integer>     Sub-band selection (starting from 0 for the first subband in the file)\n");
   printf("-e <string>         Output file extension (defaults to sdfits)  (note that this is not used if the -o option is set)\n");
-  printf("-h                  This help\n");
   printf("-o <string>         Output file name (this will automatically join input data sets together as one output file)\n");
   printf("-noXpol             Do not output cross polarisation terms\n");
   printf("-srcName <from> <to> Changes source names from <from> to <to>\n");
   printf("<filename>          SDHDF file corresponding to observations\n");
   printf("\n");
+
   printf("\nExample:\n\n");
   printf("sdhdf_convertTo <filename.hdf>\n");
-  printf("---------------------\n");
 
   exit(1);
 }

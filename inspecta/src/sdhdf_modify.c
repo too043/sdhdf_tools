@@ -41,8 +41,8 @@
 #include <libgen.h>
 #include "T2toolkit.h"
 
+#define VNUM "v2.0"
 #define MAX_COMMANDS 128
-
 
 // Structure of commands
 // type = 1 = time averaging, param1 = number of dumps to average, param2 = 1 = sum, = 2 = average
@@ -90,34 +90,37 @@ void allocateMemory(dataStruct *in);
 
 void help()
 {
-  printf("sdhdf_modify: routine to process an sdhdf file\n\n");
-  printf("-bary_noregrid      - convert frequency axis to the barycentre\n");
-  printf("-bary_regrid        - convert frequency axis to the barycentre and regrid back to the original frequency axis\n");
-  printf("-cal                = process the noise source, not the astronomy data\n");
-  printf("-e <ext>            - use output file extension <ext>\n");
-  printf("-h                  - this help\n");
-  printf("-F or -Fsum         - completely sum frequency channels\n");
-  printf("-Fav                - completely average frequency channels (weighted mean)\n");
-  printf("-fav <val>          - average (weighted mean) val frequency channels together\n");
-  printf("-favMedian <val>    - average (*un*weighted median) val frequency channels together\n");
-  printf("-lsr_noregrid       - convert frequency axis to the LSR (LSRK-approx)\n");
-  printf("-lsr_regrid         - convert frequency axis to the LSR (LSRK-approx) and regrid back to the original frequency axis\n");
-  printf("-lsr2_noregrid       - convert frequency axis to the LSR (LSRK-precise)\n");
-  printf("-lsr2_regrid         - convert frequency axis to the LSR (LSRK-precise) and regrid back to the original frequency axis\n");
-  printf("-p1 or -p1_sum      - summation of P0 and P1\n");
-  printf("-p1_av              - (P0+P1)/2 \n");
-  printf("-showVel            - output the velocity correction to the LSR or barycentre\n");
-  printf("-singleFreqAxis     - only write out a single frequency dimension (nchan) instead of (ndump x nchan)\n");
-  printf("-T or -Tsum         - completely sum in time\n");
-  printf("-Tav                - completely average (weighted mean) in time\n");
-  printf("-tav <val>          - average (weighted mean) val time dumps together\n");
-  printf("-tsum <val>         - sum val time dumps together\n");
+  printf("\nsdhdf_modify      %s\n",VNUM);
+  printf("INSPECTA version: %s\n",SOFTWARE_VER);
+  printf("Author:           George Hobbs\n");
+  printf("Software to modify an SDHDF file\n");
 
-  printf("-v                  - verbose output\n");
-  printf("\n\n");
-  printf("Example: sdhdf_modify -T -e T *.hdf\n");  
+  printf("\nCommand line arguments:\n\n");
+  printf("-h                This help\n");
+  printf("-bary_noregrid    Convert frequency axis to the barycentre\n");
+  printf("-bary_regrid      Convert frequency axis to the barycentre and regrid back to the original frequency axis\n");
+  printf("-cal              Process the noise source, not the astronomy data\n");
+  printf("-e <ext>          Use output file extension <ext>\n");
+  printf("-F or -Fsum       Completely sum frequency channels\n");
+  printf("-Fav              Completely average frequency channels (weighted mean)\n");
+  printf("-fav <val>        Average (weighted mean) val frequency channels together\n");
+  printf("-favMedian <val>  Average (*un*weighted median) val frequency channels together\n");
+  printf("-lsr_noregrid     Convert frequency axis to the LSR\n");
+  printf("-lsr_regrid       Convert frequency axis to the LSR and regrid back to the original frequency axis\n");
+  printf("-p1 or -p1_sum    Summation of P0 and P1\n");
+  printf("-p1_av            (P0+P1)/2 \n");
+  printf("-singleFreqAxis   Only write out a single frequency dimension (nchan) instead of (ndump x nchan)\n");
+  printf("-T or -Tsum       Completely sum in time\n");
+  printf("-Tav              Completely average (weighted mean) in time\n");
+  printf("-tav <val>        Average (weighted mean) val time dumps together\n");
+  printf("-tsum <val>       Sum val time dumps together\n");
+  printf("-v                Verbose output\n");
+
+  printf("\nExample:\n\n");
+  printf("sdhdf_modify -T -e T *.hdf\n\n");
+
+  exit(1);
 }
-
 
 int main(int argc,char *argv[])
 {
@@ -141,6 +144,9 @@ int main(int argc,char *argv[])
   commands = (commandStruct *)malloc(sizeof(commandStruct)*MAX_COMMANDS);
 
   sdhdf_storeArguments(args,MAX_ARGLEN,argc,argv);
+  if (argc==1)
+    help();
+	
   for (i=1;i<argc;i++)
     {
       if (strcmp(argv[i],"-Tsum")==0 || strcmp(argv[i],"-T")==0)        // Completely sum in time

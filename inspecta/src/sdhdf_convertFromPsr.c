@@ -23,7 +23,7 @@
 #include "inspecta.h"
 #include "hdf5.h"
 
-#define VNUM "v0.1"
+#define VNUM "v2.0"
 
 //
 // Code to convert from filterbank and PSRFITS format to SDHDF
@@ -76,7 +76,30 @@ typedef struct header {
   int  nsblk;
 } header;
 
+void help()
+{
+  printf("\nsdhdf_convertFromPsr  %s\n",VNUM);
+	printf("INSPECTA version:     %s\n",SOFTWARE_VER);
+  printf("Author:               George Hobbs\n");
+  printf("Software to convert a filterbank or PSRFITS file to SDHDF format\n");
 
+  printf("\nCommand line arguments:\n\n");
+	printf("-h                    This help\n");
+	printf("-f <filename>         Filename to convert\n");
+  printf("-cal                  \n");
+  printf("-calOn					      \n");
+	printf("-calOff					      \n");
+  printf("-pulseOff		  	      \n");
+  printf("-bin                  \n");
+  printf("-type                 \n");
+  printf("-nsblk                \n");
+	printf("-o <filename>         Output filename\n");
+
+	printf("\nExample:\n\n");
+  printf("sdhdf_convertFromPsr -f file.hdf\n\n");
+
+  exit(1);
+}
 
 void readFilHeader(char *fname,FILE *inputfile,header *head);
 void get_string(FILE *fin,int *nbytes,char string[]);
@@ -174,6 +197,9 @@ int main(int argc,char *argv[])
   
   sdhdf_setMetadataDefaults(primaryHeader,beamHeader,bandHeader,softwareVersions,history,1,1);
 
+  if (argc==1)
+    help();
+    
   for (i=1;i<argc;i++)
     {
       if (strcmp(argv[i],"-f")==0)

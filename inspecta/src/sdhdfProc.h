@@ -23,7 +23,7 @@
 #include "sdhdf_v1.9.h"
 #include <complex.h>
 
-#define SOFTWARE_VER "v0.1"
+#define SOFTWARE_VER "v2.0"
 #define MAX_STRLEN     512
 #define MAX_ARGLEN     4096         // Maximum number of characters to be stored in HISTORY from the command line
 #define MAX_FILES      8192         // Maximum number of files to be processed in batch processing

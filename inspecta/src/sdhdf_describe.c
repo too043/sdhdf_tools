@@ -27,13 +27,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "sdhdfProc.h"
+#include "inspecta.h"
 
 #define VERSION "v1.0"
 
 void help()
 {
-  printf("sdhdf_describe %s (SDHDFProc %s)\n",VERSION,SOFTWARE_VER);
+  printf("sdhdf_describe %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
   printf("Authors: G. Hobbs\n");
   printf("Purpose: to present meta-data information for multiple SDHDF files\n");
   printf("Example: sdhdf_describe file1.hdf file2.hdf\n");

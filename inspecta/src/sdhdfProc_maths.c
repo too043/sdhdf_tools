@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "sdhdfProc.h"
+#include "inspecta.h"
 #include <complex.h>
 
 double turn_deg(double turn){

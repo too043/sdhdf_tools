@@ -27,13 +27,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "sdhdfProc.h"
+#include "inspecta.h"
 
 #define VERSION "v0.5"
 
 void help()
 {
-  printf("sdhdf_quickdump %s (SDHDFProc %s)\n",VERSION,SOFTWARE_VER);
+  printf("sdhdf_quickdump %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
   printf("Authors: G. Hobbs\n");
   printf("Purpose: to present data within a file\n");
   printf("\n");

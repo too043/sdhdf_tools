@@ -21,7 +21,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "hdf5.h"
-#include "sdhdfProc.h"
+#include "inspecta.h"
 #include <cpgplot.h>
 #include "TKnonlinearFit.h"
 

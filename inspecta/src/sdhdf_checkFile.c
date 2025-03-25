@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "sdhdfProc.h"
+#include "inspecta.h"
 
 #define VERSION "v1.0"
 #define MAX_HISTORY_LOG 512
@@ -47,7 +47,7 @@ typedef struct historyLogStruct {
 
 void help()
 {
-  printf("sdhdf_checkFile %s (SDHDFProc %s)\n",VERSION,SOFTWARE_VER);
+  printf("sdhdf_checkFile %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
   printf("Authors: G. Hobbs\n");
 
   printf("\n\n");

@@ -21,7 +21,7 @@
 #include <string.h>
 #include <math.h>
 #include "fitsio.h"
-#include "sdhdfProc.h"
+#include "inspecta.h"
 #include "hdf5.h"
 
 #define VNUM "v0.1"

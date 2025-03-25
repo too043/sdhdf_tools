@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "sdhdfProc.h"
+#include "inspecta.h"
 #include "TKfit.h"
 
 #define VERSION "v0.5"
@@ -41,7 +41,7 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 
 void help()
 {
-  printf("sdhdf_calibrate %s (SDHDFProc %s)\n",VERSION,SOFTWARE_VER);
+  printf("sdhdf_calibrate %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
   printf("Authors: G. Hobbs\n");
   printf("Purpose: to calibrate the data sets\n");
   printf("\n");

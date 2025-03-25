@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "sdhdfProc.h"
+#include "inspecta.h"
 #include "fitsio.h"
 
 #define VERSION "v0.5"
@@ -38,7 +38,7 @@ void createDataForAstro(fitsfile *astro,sdhdf_fileStruct *inFile,int fixFreq);
 
 void help()
 {
-  printf("sdhdf_convertToPSRFITS %s (SDHDFProc %s)\n",VERSION,SOFTWARE_VER);
+  printf("sdhdf_convertToPSRFITS %s (INSPECTA %s)\n",VERSION,SOFTWARE_VER);
   printf("Authors: G. Hobbs\n");
 
   exit(1);

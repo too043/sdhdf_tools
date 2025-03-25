@@ -247,6 +247,7 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
 
   float specMiny,specMaxy;
   float *specX,*specY,*specY2,*specY3,*specY4;
+  float *plotSpecX;
   float val;
 
   float mx,my;
@@ -265,11 +266,17 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
   int log=-1;
   int colourScale=1;
   int imax,jmax;
+
+  int nchanUse=0;
+  int i0;
   
   if (specMinx == -1) specMinx = f0;
   if (specMaxx == -1) specMaxx = f0+nchan*chbw;
+
+  nchanUse = (int)((specMaxx-specMinx)/chbw+0.5);
   
   specX = (float *)malloc(sizeof(float)*nchan);
+  plotSpecX = (float *)malloc(sizeof(float)*nchan);
   specY = (float *)malloc(sizeof(float)*nchan);
   specY2 = (float *)malloc(sizeof(float)*nchan);
   specY3 = (float *)malloc(sizeof(float)*nchan);
@@ -277,8 +284,8 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
   heatMap = (float *)malloc(sizeof(float)*nchan*ndump);
   
   printf("Making plot with nchan = %d, ndump = %d\n",nchan,ndump);
-
-  tr[0] = f0; tr[1] = chbw; tr[2] = 0;
+  printf("nchanUse = %d\n",nchanUse);
+  tr[0] = specMinx; tr[1] = chbw; tr[2] = 0;
   tr[3] = 0; tr[4] = 0; tr[5] = 1;
   cpgbeg(0,"/xs",1,1);
   cpgsch(1.4);
@@ -315,98 +322,107 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
 		}
 	    }
 	}
-
+    
       t=0;
       t_z=0;
+      i0=0;
       for (i=0;i<nchan;i++)
 	{
-	  specY[i] = 0.0;
-	  
-	  
-	  for (j=0;j<ndump;j++)
+	  if (specX[i] > specMinx && specX[i] < specMaxx)
 	    {
-	      if (wt[j*nchan+i] == 0)
-		val = 0;
-	      else		
-		val = dumpParams[j].scale*pow(10,signalVal[j*nchan+i]);
-	      //	      if (j==1)
-		//		printf("Have %d %d %g\n",i,j,wt[j*nchan+i]);
-	      //	      if (val > 0 && j > 0)
-	      //		printf("%d %d Val = %g\n",i,j,val);
-	      if (log==1 && val > 0)
-		heatMap[j*nchan+i] = log10(val);
-	      else
-		heatMap[j*nchan+i] = val;
-	      
-	      if (specX[i] > specMinx && specX[i] < specMaxx  && wt[j*nchan+i] > 0)
+	      specY[i0] = 0.0;
+	      plotSpecX[i0] = specX[i];
+	  
+	      for (j=0;j<ndump;j++)
 		{
-		  if (t_z==0)
-		    {
-		      imax = i; jmax = j;
-		      if (setZrange==0)
-			{
-			  minz = maxz = heatMap[j*nchan+i];
-			  printf("In here setting %g %g\n",minz,maxz);
-			}
-		      t_z=1;
-		    }
+		  if (wt[j*nchan+i] == 0)
+		    val = 0;
+		  else		
+		    val = dumpParams[j].scale*pow(10,signalVal[j*nchan+i]);
+		  //	      if (j==1)
+		  //		printf("Have %d %d %g\n",i,j,wt[j*nchan+i]);
+		  //	      if (val > 0 && j > 0)
+		  //	      printf("%d %d Val = %g\n",i,j,val);
+		  if (log==1 && val > 0)
+		    heatMap[j*nchanUse+i0] = log10(val);
 		  else
+		    heatMap[j*nchanUse+i0] = val;
+		  if (wt[j*nchan+i] > 0)
 		    {
-		      if (setZrange == 0)
+		      
+		      if (t_z==0)
 			{
-			  if (minz > heatMap[j*nchan+i]) minz = heatMap[j*nchan+i];
-			  if (maxz < heatMap[j*nchan+i]) {maxz = heatMap[j*nchan+i]; imax = i; jmax = j;}
+			  imax = i0; jmax = j;
+			  if (setZrange==0)
+			    {
+			      minz = maxz = heatMap[j*nchanUse+i0];
+			      printf("In here setting %g %g\n",minz,maxz);
+			    }
+			  t_z=1;
+			}
+		      else
+			{
+			  if (setZrange == 0)
+			    {
+			      if (minz > heatMap[j*nchanUse+i0]) minz = heatMap[j*nchanUse+i0];
+			      if (maxz < heatMap[j*nchanUse+i0]) {maxz = heatMap[j*nchanUse+i0]; imax = i0; jmax = j;}
+			    }
 			}
 		    }
-		}
-	    
+		
+	      
 	      if (j==specSelect)
 		{
 		  if (log==1)
-		    specY4[i] = log10(val);
+		    specY4[i0] = log10(val);
 		  else
-		    specY4[i] = (val);
+		    specY4[i0] = (val);
 		}
 	      if (j==0)
 		{
 		  if (log==1)
-		    specY2[i] = specY3[i] = log10(val);
+		    specY2[i0] = specY3[i0] = log10(val);
 		  else
-		    specY2[i] = specY3[i] = val;
+		    specY2[i0] = specY3[i0] = val;
 		}
 	      else
 		{
 		  if (log==1)
 		    {
-		      if (specY2[i] > log10(val)) specY2[i] = log10(val);
-		      if (specY3[i] < log10(val)) specY3[i] = log10(val);
+		      if (specY2[i0] > log10(val)) specY2[i0] = log10(val);
+		      if (specY3[i0] < log10(val)) specY3[i0] = log10(val);
 		    }
 		  else
 		    {
-		      if (specY2[i] > (val)) specY2[i] = (val);
-		      if (specY3[i] < (val)) specY3[i] = (val);
+		      if (specY2[i0] > (val)) specY2[i0] = (val);
+		      if (specY3[i0] < (val)) specY3[i0] = (val);
 		    }
 		}
-	      specY[i] += val;
-	    }
+	      specY[i0] += val;
+		}
+	      
 	  if (log==1)
-	    specY[i] = log10(specY[i]/ndump);
+	    specY[i0] = log10(specY[i0]/ndump);
 	  else
-	    specY[i] = (specY[i]/ndump);
-	
-	  if (specX[i] > specMinx && specX[i] < specMaxx)
-	    {
+	    specY[i0] = (specY[i0]/ndump);
+	    	
+	  //	  if (specX[i0] > specMinx && specX[i0] < specMaxx)
+	  //	    {
 	      if (t==0)
 		{
-		  specMiny = specY2[i];
-		  specMaxy = specY3[i];
+		  specMiny = specY2[i0];
+		  specMaxy = specY3[i0];
 		  t=1;
 		}
 	      
-	      if (specMiny > specY2[i]) specMiny = specY2[i];
-	      if (specMaxy < specY3[i]) specMaxy = specY3[i];      
+	      if (specMiny > specY2[i0]) specMiny = specY2[i0];
+	      if (specMaxy < specY3[i0]) specMaxy = specY3[i0];      
+	      //	    }
+	  i0++;
 	    }
 	}
+
+      
       //      maxz = 2000;
       printf("Have colour range from %g to %g\n",minz,maxz);
       printf("Brightest pixel at (%d,%d) corresponding to frequency %.6f\n",imax,jmax,specX[imax]);
@@ -420,10 +436,10 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
       cpgswin(specMinx,specMaxx,specMiny,specMaxy);
       cpgbox("ABCTSN",0,0,"ABCTSN",0,0);
       cpglab("Frequency (MHz)","","");
-      cpgline(nchan,specX,specY);
-      cpgsci(2); cpgline(nchan,specX,specY2);
-      cpgsci(4); cpgline(nchan,specX,specY3);
-      if (specSelect >= 0) {cpgsci(3); cpgline(nchan,specX,specY4);}
+      cpgline(nchanUse,plotSpecX,specY);
+      cpgsci(2); cpgline(nchanUse,plotSpecX,specY2);
+      cpgsci(4); cpgline(nchanUse,plotSpecX,specY3);
+      if (specSelect >= 0) {cpgsci(3); cpgline(nchanUse,plotSpecX,specY4);}
       cpgsci(1);
       
       cpgsvp(0.1,0.95,0.4,0.95);
@@ -435,17 +451,17 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
 
       cpgctab(heat_l,heat_r,heat_g,heat_b,5,1.0,0.5);
       printf("Making the waterfall plot with nchan = %d, ndump = %d, minz = %g, maxz = %g\n",nchan,ndump,minz,maxz);
-      printf("WARNING: if the top plot is completely empty, then perhaps you are trying to plot too many frequency channels.\n");
+      printf("WARNING: if the top plot is completely empty, then perhaps you are trying to plot too many frequency channels. You could also select a frequency range with -frange.!\n");
       printf("         Use sdhdf_modify -fav to average in frequency or use sdhdf_extractBand to select a zoom band if\n");
       printf("         you wish to keep the full frequency resolution\n");
       if (colourScale==1)
-	cpgimag(heatMap,nchan,ndump,1,nchan,1,ndump,minz,maxz,tr);
+	cpgimag(heatMap,nchanUse,ndump,1,nchanUse,1,ndump,minz,maxz,tr);
       else if (colourScale==2)
-	cpgimag(heatMap,nchan,ndump,1,nchan,1,ndump,maxz,minz,tr);
+	cpgimag(heatMap,nchanUse,ndump,1,nchanUse,1,ndump,maxz,minz,tr);
       else if (colourScale==3)
-	cpggray(heatMap,nchan,ndump,1,nchan,1,ndump,maxz,minz,tr);
+	cpggray(heatMap,nchanUse,ndump,1,nchanUse,1,ndump,maxz,minz,tr);
       else if (colourScale==4)
-	cpggray(heatMap,nchan,ndump,1,nchan,1,ndump,minz,maxz,tr);
+	cpggray(heatMap,nchanUse,ndump,1,nchanUse,1,ndump,minz,maxz,tr);
 
       cpgcurs(&mx,&my,&key);
       if (key=='A')
@@ -476,7 +492,7 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
 	  FILE *fout;
 	  printf("writing spectrum to waterfall_spectrum.dat");
 	  fout = fopen("waterfall_spectrum.dat","w");
-	  for (i=0;i<nchan;i++)
+	  for (i=0;i<nchanUse;i++)
 	    fprintf(fout,"%d %.6f %g\n",i,specX[i],specY[i]);
 	  fclose(fout);
 	}
@@ -508,7 +524,7 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
 	  heatMiny = 0;
 	  heatMaxy = ndump;
 	  specMinx = f0;
-	  specMaxx = f0+nchan*chbw;	  
+	  specMaxx = f0+nchanUse*chbw;	  
 	}
       else if (key=='a')
 	specSelect=-1;
@@ -524,7 +540,7 @@ void makePlot(float *signalVal,int nchan,int ndump,float f0,float chbw,dumpStruc
     } while (key != 'q');
       
   cpgend();
-
+  free(plotSpecX);
   free(specX);
   free(specY);
   free(specY2);

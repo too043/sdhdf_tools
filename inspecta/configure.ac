@@ -46,5 +46,5 @@ AC_CONFIG_FILES([
 AC_OUTPUT
 
 echo
-echo "sdhdfProc is ready to be compiled. Please run 'make'"
+echo "INSPECTA is ready to be compiled. Please run 'make'"
 echo

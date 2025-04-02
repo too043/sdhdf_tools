@@ -46,11 +46,11 @@
 	        }
         }
     },
-    "config": {
+    "configuration": {
 	    "attributes": {
             "DESCRIPTION": "SDHDF group containing configuration parameters as defined at the time of the observation",
-	        "NAME": "config",
-	        "SDHDF_CLASS": "sdhdf_config"
+	        "NAME": "configuration",
+	        "SDHDF_CLASS": "sdhdf_configuration"
 	    },
         "backend": "configuration/instrument_configuration",
         "cal_backend": "configuration/instrument_configuration",

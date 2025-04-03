@@ -7,7 +7,6 @@ import os
 from datetime import datetime
 
 import h5py
-from tabulate import tabulate
 
 __version__ = "2.2"
 __author__ = "Lawrence Toomey"
@@ -54,7 +53,6 @@ def read_csv(f_name):
     reader = csv.reader(f_csv, delimiter=",")
     for row in reader:
         row_data.append(row)
-    print(tabulate(row_data))
 
 
 def append_attributes(obj_attrs, defn_list):
@@ -67,7 +65,7 @@ def append_attributes(obj_attrs, defn_list):
     """
     for attr in obj_attrs:
         if attr in ("DIMENSION_LIST", "REFERENCE_LIST"):
-            print("Ignoring attribute %s" % attr)
+            pass
         elif attr == "DIMENSION_LABELS":
             vl = []
             for v in obj_attrs[attr]:
@@ -100,9 +98,9 @@ def show_sdhdf_definition(f, sb, output):
             defn_csv = "SDHDF_definition_" + sdhdf_ver + ".csv"
 
             add_line(defn_csv, "SDHDF Definition Overview,-,-")
-            add_line(defn_csv, "SDHDF Definition Version,%s,-" % sdhdf_ver)
-            add_line(defn_csv, "Author,%s,-" % __author__)
-            add_line(defn_csv, "Copyright,CSIRO %s,-" % dte)
+            add_line(defn_csv, f"SDHDF Definition Version,{sdhdf_ver},-")
+            add_line(defn_csv, f"Author,{__author__},-")
+            add_line(defn_csv, f"Copyright,CSIRO {dte},-")
 
             # File object metadata overview
             add_line(defn_csv, "-, -, -")
@@ -121,13 +119,12 @@ def show_sdhdf_definition(f, sb, output):
             # check existence of requested sub-band
             root_keys = list(h5.keys())
             beam = root_keys[0]
-            if sb != "all":
-                if sb not in list(h5[beam].keys()):
-                    raise Exception("ERROR: no such sub-band %s" % sb)
+            if sb != "all" and sb not in list(h5[beam].keys()):
+                msg = f"ERROR: no such sub-band {sb}"
+                raise Exception(msg)
 
             # Loop over the groups and datasets and retrieve the attributes
             for k in h5:
-                print("Processing root group %s" % k)
                 defn_list = []
                 # root group
                 if "Group" in str(type(h5[k])):
@@ -138,7 +135,6 @@ def show_sdhdf_definition(f, sb, output):
                     # beam, config, metadata groups
                     for a in list(h5[k].keys()):
                         if a == sb or "SB" not in a or sb != "all":
-                            print("-> Processing group %s" % a)
                             if "Group" in str(type(h5[k][a])):
                                 pth_str = "/" + k + "/" + a
                                 defn_list.append([pth_str, "Group", "-"])
@@ -182,32 +178,25 @@ def show_sdhdf_definition(f, sb, output):
                                 append_attributes(h5[k][a].attrs, defn_list)
                                 defn_list.append(["-", "-", "-"])
                         elif "SB" in a:
-                            print("Skipping group %s" % a)
+                            pass
 
                     add_rows_to_csv(defn_csv, defn_list)
 
             add_line(defn_csv, "\n" + hr)
             add_line(
                 defn_csv,
-                "PASS: File %s conforms to SDHDF definition v%s" % (f_name, sdhdf_ver),
+                f"PASS: File {f_name} conforms to SDHDF definition v{sdhdf_ver}",
             )
-            add_line(defn_csv, "Output written to %s" % defn_csv)
+            add_line(defn_csv, f"Output written to {defn_csv}")
 
             # read back csv file
             if bool(output) is True:
                 read_csv(defn_csv)
             else:
-                print(
-                    "PASS: File %s conforms to SDHDF definition v%s"
-                    % (f_name, sdhdf_ver)
-                )
+                pass
 
-    except Exception as e:
-        print(
-            "ERROR: failed to read %s - "
-            "file does not conform to the SDHDF definition" % f,
-            e,
-        )
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """SDHDF Error classes"""
 
 from __future__ import annotations

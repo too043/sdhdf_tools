@@ -1,4 +1,3 @@
-#! /usr/bin/env python3
 """Core SDHDF module"""
 
 from __future__ import annotations
@@ -50,7 +49,8 @@ def _get_sdhdf_version(filename: Path) -> tuple[float, Path]:
             # compound attributes for SDHDF >=4.0
             version = float(primary_header.attrs[hdr_key][0][2].decode())
         if version is None:
-            raise ValueError(f"SDHDF version not found in file '{filename}'")
+            msg = f"SDHDF version not found in file '{filename}'"
+            raise ValueError(msg)
         if version <= 2.0:
             version = 2.0
         elif (version > 2.0) and (version <= 2.1):
@@ -62,9 +62,8 @@ def _get_sdhdf_version(filename: Path) -> tuple[float, Path]:
             with resources.path("pyINSPECTA", "definitions") as definition_dir:
                 definition_file = definition_dir / f"sdhdf_def_v{version}.json"
         except ValueError as e:
-            raise ValueError(
-                f"SDHDF definition template {definition_file} not found."
-            ) from e
+            msg = f"SDHDF definition template {definition_file} not found."
+            raise ValueError(msg) from e
 
     return version, definition_file
 
@@ -100,7 +99,7 @@ class MetaData:
         logger.debug(f"Loading SDHDF definition template: {definition_file}")
 
         # load the definition
-        with open(definition_file) as f:
+        with definition_file.open("r") as f:
             definition = dict(json.load(f))
 
         self.definition = definition
@@ -110,7 +109,7 @@ class MetaData:
             h5file.visititems(
                 lambda name, obj: logger.debug(f"Name: {name} Object: {obj}")
             )
-            for top_group in h5file.keys():
+            for top_group in h5file:
                 is_beam = "beam" in top_group
 
                 base_path = f"/{top_group}" if is_beam else ""
@@ -153,36 +152,38 @@ class MetaData:
             return None
         if isinstance(val, dict):
             if key == "band":
-                band_paths = [k for k in h5file[base_path].keys() if "band" in k]
+                band_paths = [k for k in h5file[base_path] if "band" in k]
                 for band_path in band_paths:
                     self._get_metadata(
                         val, base_path=f"{base_path}/{band_path}", h5file=h5file
                     )
-            else:
-                self._get_metadata(val, base_path=base_path, h5file=h5file)
-        else:
-            path = f"{base_path}/{val}"
-            logger.debug(f"Path: {path}")
-            if path not in h5file:
-                logger.warning(f"Path '{path}' not found in file")
                 return None
-            attr = SDHDFTable(h5file[path], self.version)
+            self._get_metadata(val, base_path=base_path, h5file=h5file)
+            return None
+        path = f"{base_path}/{val}"
+        logger.debug(f"Path: {path}")
+        if path not in h5file:
+            logger.warning(f"Path '{path}' not found in file")
+            return None
+        attr = SDHDFTable(h5file[path], self.version)
 
-            return setattr(self, key, attr)
+        return setattr(self, key, attr)
 
     def print_obs_metadata(self, format: str = "grid") -> None:
         """Print observation metadata to the terminal"""
-        for key in self.definition["metadata"].keys():
+        _ = format
+        for key in self.definition["metadata"]:
             if key in self.__dict__:
-                df = self.__dict__[key]
+                self.__dict__[key]
             else:
                 logger.warning(f"No metadata found for key '{key}'. Ignoring...")
 
     def print_obs_config(self, format: str = "grid") -> None:
         """Print the observation configuration to the terminal"""
-        for key in self.definition["config"].keys():
+        _ = format
+        for key in self.definition["config"]:
             if key in self.__dict__:
-                df = self.__dict__[key]
+                self.__dict__[key]
             else:
                 logger.warning(f"No metadata found for key '{key}'. Ignoring...")
 
@@ -196,11 +197,12 @@ class MetaData:
             filename = Path(filename)
 
         if filename.exists() and not overwrite:
-            raise FileExistsError(f"File '{filename}' already exists")
+            msg = f"File '{filename}' already exists"
+            raise FileExistsError(msg)
         for name in ("metadata", "config"):
             for key, val in tqdm(self.definition[name].items(), desc=f"Writing {name}"):
-                df = self.__dict__[key]
-                df.to_hdf(filename, key=f"{val}", mode="a", data_columns=True)
+                meta_df = self.__dict__[key]
+                meta_df.to_hdf(filename, key=f"{val}", mode="a", data_columns=True)
 
         return history.generate_history_row()
 
@@ -320,7 +322,7 @@ class SubBand:
 
             # Get the flags (if they exist)
             if (
-                "flags" in astro_def.keys()
+                "flags" in astro_def
                 and astro_def["flags"]
                 and f"{sb_path}/{astro_def['flags']}" in h5
             ):
@@ -355,7 +357,7 @@ class SubBand:
                 flags = da.from_array(flags[:], chunks="auto")
 
             # Process into xarray
-            coords = {col: ("time", meta[col].values) for col in meta.table.columns}
+            coords = {col: ("time", meta[col].to_numpy()) for col in meta.table.columns}
 
             dim_labels = h5[data_path].attrs["DIMENSION_LABELS"]
             if isinstance(dim_labels, bytes):
@@ -438,15 +440,13 @@ class SubBand:
             if "beam" in flag_xr.dims:
                 flag_xr = flag_xr.isel(beam=0)
 
-            astronomy_dataset = Dataset(
+            return Dataset(
                 {
                     "data": data_xr,
                     "flag": flag_xr,
                     "metadata": xr.DataArray(meta.table, dims=["time", "meta"]),
                 },
             )
-
-            return astronomy_dataset
 
     def plot_waterfall(
         self,
@@ -472,7 +472,7 @@ class SubBand:
                 sub_data = sub_data.where(sub_data.flag == 0)
             sub_data.data.plot(x="frequency", **plot_kwargs)
             ax = plt.gca()
-            ax.set_title("Waterfall Plot (flagged = %s)" % str(flag), fontsize=10)
+            ax.set_title(f"Waterfall Plot (flagged = {flag!s})", fontsize=10)
 
         return ax
 
@@ -491,7 +491,7 @@ class SubBand:
             sub_data = sub_data.where(sub_data.flag == 0)
         sub_data.data.plot(**plot_kwargs)
         ax = plt.gca()
-        ax.set_title("Spectrum (flagged = %s)" % str(flag), fontsize=10)
+        ax.set_title(f"Spectrum (flagged = {flag!s})", fontsize=10)
 
         return ax
 
@@ -501,7 +501,7 @@ class SubBand:
             ~self.astronomy_dataset.flag.astype(bool)
         )
         # Set chunks for parallel processing
-        chunks = {d: 1 for d in data_xr_flg.dims}
+        chunks = dict.fromkeys(data_xr_flg.dims, 1)
         chunks["frequency"] = len(self.astronomy_dataset.data.frequency)
         data_xr_flg = data_xr_flg.chunk(chunks)
         mask = (
@@ -519,8 +519,7 @@ class SubBand:
             .astype(bool)
         )
         self.astronomy_dataset["flag"] = mask.astype(int).compute()
-        hist = history.generate_history_row()
-        return hist
+        return history.generate_history_row()
 
     def decimate(
         self, bins: float | int, axis: str = "frequency", use_median: bool = False
@@ -542,10 +541,9 @@ class SubBand:
         """
 
         if axis == "time":
-            # TODO: Figure out how to decimate along the time axis - includeing the metadata / coords
-            raise NotImplementedError(
-                "Decimation along the time axis is not yet implemented"
-            )
+            # TODO: Figure out how to decimate along the time axis - including the metadata / coords
+            msg = "Decimation along the time axis is not yet implemented"
+            raise NotImplementedError(msg)
         dataset = self.astronomy_dataset
         if isinstance(bins, float):
             # Convert to integer number of bins
@@ -611,26 +609,25 @@ class SubBand:
             attrs=dataset.attrs,
         )
         self.astronomy_dataset = dataset_dec
-        hist = history.generate_history_row()
-        return hist
+        return history.generate_history_row()
 
     def _write_astronomy_dataset(self, filename: Path) -> pd.DataFrame:
         astro_def = self.definition["beam"]["band"]["astronomy"]
         sb_path = f"{self.beam_label}/{self.label}"
         with h5py.File(filename, "w") as f:
-            f[f"{sb_path}/{astro_def['data']}"] = self.astronomy_dataset.data.values
+            f[f"{sb_path}/{astro_def['data']}"] = self.astronomy_dataset.data.to_numpy()
             f[f"{sb_path}/{astro_def['frequency']}"] = (
-                self.astronomy_dataset.frequency.values
+                self.astronomy_dataset.frequency.to_numpy()
             )
             if "flags" in self.definition["beam"]["band"]["astronomy"]:
                 f[f"{sb_path}/{astro_def['flags']}"] = (
-                    self.astronomy_dataset.flag.values
+                    self.astronomy_dataset.flag.to_numpy()
                 )
             else:
                 logger.warning("No flags in definition")
                 logger.info("Saving flags to /astronomy_data/flags")
                 f[f"{sb_path}/astronomy_data/flags"] = (
-                    self.astronomy_dataset.flag.values
+                    self.astronomy_dataset.flag.to_numpy()
                 )
 
         self.astronomy_dataset.metadata.to_dataframe().to_hdf(
@@ -643,6 +640,7 @@ class SubBand:
 
     def _write_cal_dataset(self, filename: Path):
         # TODO: Write the cal dataset
+        _ = filename
         return history.generate_history_row()
 
     def write(
@@ -661,7 +659,8 @@ class SubBand:
         if isinstance(filename, str):
             filename = Path(filename)
         if filename.exists() and not overwrite:
-            raise FileExistsError(f"{filename} already exists")
+            msg = f"{filename} already exists"
+            raise FileExistsError(msg)
 
         astro_hist = self._write_astronomy_dataset(filename)
         cal_hist = self._write_cal_dataset(filename)
@@ -727,12 +726,11 @@ class Beam:
         elif isinstance(subband, str):
             subband = self.__dict__[subband]
 
-        ax = subband.plot_waterfall(
+        return subband.plot_waterfall(
             polarization=polarization,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def plot_spectrum(
         self,
@@ -747,13 +745,12 @@ class Beam:
         elif isinstance(subband, str):
             subband = self.__dict__[subband]
 
-        ax = subband.plot_spectrum(
+        return subband.plot_spectrum(
             time=time,
             polarization=polarization,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def plot_wide(
         self,
@@ -763,7 +760,7 @@ class Beam:
         **plot_kwargs,
     ):
         fig, ax = plt.subplots()
-        for i, sb in enumerate(self.subbands):
+        for _i, sb in enumerate(self.subbands):
             sb.plot_spectrum(
                 time=time,
                 polarization=polarization,
@@ -773,7 +770,7 @@ class Beam:
                 **plot_kwargs,
             )
         ax.legend()
-        ax.set_title("Wide-band Spectrum (flagged = %s)" % str(flag), fontsize=10)
+        ax.set_title(f"Wide-band Spectrum (flagged = {flag!s})", fontsize=10)
 
         return ax
 
@@ -828,7 +825,7 @@ class Beam:
         for sb in tqdm(self.subbands, "Writing subbands"):
             hists.extend(sb.write(filename, overwrite=overwrite))
 
-        return hists + [history.generate_history_row()]
+        return [*hists, history.generate_history_row()]
 
 
 @dataclass
@@ -899,13 +896,12 @@ class SDHDF:
             beam = self.beams[beam]
         elif isinstance(beam, str):
             beam = self.__dict__[beam]
-        ax = beam.plot_waterfall(
+        return beam.plot_waterfall(
             subband=subband,
             polarization=polarization,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def plot_spectrum(
         self,
@@ -921,14 +917,13 @@ class SDHDF:
         elif isinstance(beam, str):
             beam = self.__dict__[beam]
 
-        ax = beam.plot_spectrum(
+        return beam.plot_spectrum(
             subband=subband,
             time=time,
             polarization=polarization,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def plot_wide(
         self,
@@ -943,13 +938,12 @@ class SDHDF:
         elif isinstance(beam, str):
             beam = self.__dict__[beam]
 
-        ax = beam.plot_wide(
+        return beam.plot_wide(
             time=time,
             polarization=polarization,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def print_obs_metadata(self, format: str = "fancy_outline"):
         self.metadata.print_obs_metadata(format=format)
@@ -969,7 +963,7 @@ class SDHDF:
             )
             telescope = "Parkes"
         rfi = flagging.get_persistent_rfi(telescope=telescope)
-        for i, x in tqdm(
+        for _i, x in tqdm(
             rfi.iterrows(), desc="Flagging persistent RFI", total=len(rfi)
         ):
             for beam in self.beams:
@@ -995,7 +989,7 @@ class SDHDF:
         for beam in tqdm(self.beams, desc="Flagging beams"):
             hists.extend(beam.autoflag(sigma=sigma, n_windows=n_windows))
 
-        self.metadata.history.table = pd.concat([self.metadata.history.table] + hists)
+        self.metadata.history.table = pd.concat([self.metadata.history.table, *hists])
 
     def decimate(self, bins: float | int, axis: str = "frequency", use_median=False):
         """Decimate the data in all subbands.
@@ -1011,7 +1005,7 @@ class SDHDF:
         for beam in tqdm(self.beams, desc="Decimating beams"):
             hists.extend(beam.decimate(bins=bins, axis=axis, use_median=use_median))
 
-        self.metadata.history = pd.concat([self.metadata.history] + hists)
+        self.metadata.history = pd.concat([self.metadata.history, *hists])
 
     def write(self, filename: str | Path, overwrite: bool = False):
         """Write the SDHDF object to a file.
@@ -1024,6 +1018,6 @@ class SDHDF:
             hists.extend(beam.write(filename, overwrite=overwrite))
 
         self.metadata.history = pd.concat(
-            [self.metadata.history] + hists + [history.generate_history_row()]
+            [self.metadata.history, *hists, history.generate_history_row()]
         )
         self.metadata.write(filename, overwrite=overwrite)

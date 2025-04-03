@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore", category=Warning, append=True)
 
 
 class SDHDFTable:
-    def __init__(self, sdhdf_dataset: h5py.Dataset, version, *args, **kwargs):
+    def __init__(self, sdhdf_dataset: h5py.Dataset, version):
         """Read an SDHDF table
 
         Args:

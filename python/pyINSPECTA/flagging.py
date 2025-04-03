@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """SDHDF flagging utilities"""
 
 from __future__ import annotations
@@ -27,10 +26,9 @@ def get_persistent_rfi(telescope: str = "Parkes") -> pd.DataFrame:
         "pyINSPECTA", f"{telescope.lower()}_rfi.csv"
     )
     if not Path(rfi_file).exists():
-        raise NotImplementedError(
-            f"Persistent RFI file for {telescope} not found at '{Path(rfi_file).absolute()}'."
-        )
-    rfi_df = pd.read_csv(
+        msg = f"Persistent RFI file for {telescope} not found at '{Path(rfi_file).absolute()}'."
+        raise NotImplementedError(msg)
+    return pd.read_csv(
         rfi_file,
         sep=",",
         # skip_blank_lines=True,
@@ -46,7 +44,6 @@ def get_persistent_rfi(telescope: str = "Parkes") -> pd.DataFrame:
             "text string for label",
         ],
     )
-    return rfi_df
 
 
 def box_filter(spectrum: np.ndarray | DataArray, sigma=3, n_windows=100):

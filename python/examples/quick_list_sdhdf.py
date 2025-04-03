@@ -7,7 +7,6 @@ import os
 
 import h5py
 from astropy.table import QTable
-from tabulate import tabulate
 
 __version__ = "2.2"
 __author__ = "Lawrence Toomey"
@@ -51,8 +50,8 @@ def get_metadata(pth):
                 )
                 row_d.append(row)
 
-    except Exception as e:
-        print("ERROR: failed to read file %s" % f, e)
+    except Exception:
+        pass
 
     return row_d
 
@@ -64,17 +63,6 @@ def quick_list(pth):
     :return: None
     """
     row_data = []
-    hdr = (
-        "File",
-        "SDHDF Version",
-        "Sched Block ID",
-        "Project ID",
-        "Beam",
-        "Source",
-        "Obs Type",
-        "UTC start",
-        "No. bands",
-    )
 
     if os.path.isdir(pth):
         for fpth in glob.glob(pth + "/*.hdf"):
@@ -84,7 +72,6 @@ def quick_list(pth):
     else:
         row_data = get_metadata(pth)
 
-    print(tabulate(row_data, headers=hdr))
 
 
 if __name__ == "__main__":

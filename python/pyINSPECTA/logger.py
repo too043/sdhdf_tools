@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Logging module for pyINSPECTA"""
 
 from __future__ import annotations

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """SDHDF history utilities"""
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ def generate_history_row() -> pd.DataFrame:
     # Get the calling function's arguments
     process_arguments = str(inspect.stack()[1][0].f_locals["self"].__dict__)
 
-    history_row = pd.DataFrame(
+    return pd.DataFrame(
         {
             "DATE": datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S"),
             "PROC": process_name,
@@ -33,4 +32,3 @@ def generate_history_row() -> pd.DataFrame:
         },
         index=[0],
     )
-    return history_row

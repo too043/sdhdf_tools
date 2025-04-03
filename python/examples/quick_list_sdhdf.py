@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import annotations
+
 import argparse
 import glob
 import os
@@ -32,7 +34,7 @@ def get_metadata(pth):
             hdr_defn_ver = ph["HDR_DEFN_VERSION"][0]
             sched_blk_id = ph["SCHED_BLOCK_ID"][0]
 
-            for beam in range(0, nbeams):
+            for beam in range(nbeams):
                 beam_id = bp["LABEL"][beam]
                 source = bp["SOURCE"][beam]
                 nbands = bp["N_BANDS"]

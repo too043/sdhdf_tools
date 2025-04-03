@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """SDHDF history utilities"""
+
+from __future__ import annotations
 
 import datetime
 import inspect

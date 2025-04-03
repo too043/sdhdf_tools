@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import annotations
+
 import argparse
 import csv
 import os
@@ -27,8 +29,6 @@ def add_rows_to_csv(f_name, rows):
     writer.writerows(rows)
     f_csv.close()
 
-    return None
-
 
 def add_line(f_name, line):
     """
@@ -41,8 +41,6 @@ def add_line(f_name, line):
     f = open(f_name, "a")
     f.write(line + "\n")
 
-    return None
-
 
 def read_csv(f_name):
     """
@@ -52,13 +50,11 @@ def read_csv(f_name):
     :return: None
     """
     row_data = []
-    f_csv = open(f_name, "r")
+    f_csv = open(f_name)
     reader = csv.reader(f_csv, delimiter=",")
     for row in reader:
         row_data.append(row)
     print(tabulate(row_data))
-
-    return None
 
 
 def append_attributes(obj_attrs, defn_list):
@@ -82,8 +78,6 @@ def append_attributes(obj_attrs, defn_list):
             defn_list.append([attr, "Attribute", vl])
         else:
             defn_list.append([attr, "Attribute", obj_attrs[attr]])
-
-    return None
 
 
 def show_sdhdf_definition(f, sb, output):
@@ -187,9 +181,8 @@ def show_sdhdf_definition(f, sb, output):
                                 defn_list.append([pth_str, "Dataset", "-"])
                                 append_attributes(h5[k][a].attrs, defn_list)
                                 defn_list.append(["-", "-", "-"])
-                        else:
-                            if "SB" in a:
-                                print("Skipping group %s" % a)
+                        elif "SB" in a:
+                            print("Skipping group %s" % a)
 
                     add_rows_to_csv(defn_csv, defn_list)
 

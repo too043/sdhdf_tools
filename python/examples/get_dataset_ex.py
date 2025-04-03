@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import annotations
+
 import argparse
 
 import h5py
@@ -75,7 +77,7 @@ def sdhdf_access_data(f, dset, out_pth):
             # print out data
             df = pd.DataFrame(data)
             for col, dtype in df.dtypes.items():
-                if dtype == np.object:
+                if dtype == object:
                     # Only process byte object columns.
                     df[col] = df[col].apply(lambda x: x.decode("utf-8"))
             df.to_csv(out_pth, sep=" ", index=False, header=True)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """SDHDF flagging utilities"""
+
+from __future__ import annotations
 
 import warnings
 from pathlib import Path
@@ -53,11 +54,13 @@ def box_filter(spectrum: np.ndarray | DataArray, sigma=3, n_windows=100):
     Filter a spectrum using a box filter.
     """
     # Divide spectrum into windows
-    window_size = len(spectrum) // n_windows
-    dat_filt = np.zeros_like(spectrum).astype(bool)
+    spectrum_squeezed = spectrum.squeeze()
+    window_size = len(spectrum_squeezed) // n_windows
+    dat_filt = np.zeros_like(spectrum_squeezed).astype(bool)
+
     # Iterate through windows
     for i in range(n_windows):
-        _dat = spectrum[i * window_size : window_size + i * window_size]
+        _dat = spectrum_squeezed[i * window_size : window_size + i * window_size]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             # Use sigma clipping to remove outliers
@@ -65,9 +68,10 @@ def box_filter(spectrum: np.ndarray | DataArray, sigma=3, n_windows=100):
                 _dat, sigma=sigma, maxiters=None, stdfunc=mad_std, masked=True
             )
         dat_filt[i * window_size : window_size + i * window_size] = _dat_filt.mask
+
+    dat_filt = dat_filt.reshape(spectrum.shape)
+
     if isinstance(spectrum, DataArray):
         return DataArray(dat_filt, dims=spectrum.dims, coords=spectrum.coords)
-    
-    return dat_filt
-    
 
+    return dat_filt

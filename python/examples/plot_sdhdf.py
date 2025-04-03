@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import annotations
+
 import h5py
 import matplotlib as mpl
 import numpy as np
@@ -148,7 +150,7 @@ def plot_sdhdf(f, sp, wf):
             z_window_lo = int(zoom_centre) - float(zoom_width)
             z_window_hi = int(zoom_centre) + float(zoom_width)
 
-            for row in range(0, len(sb_avail)):
+            for row in range(len(sb_avail)):
                 if sb_avail["LABEL"][row] == sb_label:
                     # sb_min = sb_avail[row]['LOW_FREQ']
                     # sb_max = sb_avail[row]['HIGH_FREQ']

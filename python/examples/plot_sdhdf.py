@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import annotations
+
 import h5py
 import matplotlib as mpl
 import numpy as np
@@ -25,8 +27,7 @@ def print_hdr(tb):
     params = []
     for col in tb.colnames:
         params.append([col, tb[col][0]])
-    df = pd.DataFrame(params, columns=("-- Key --", "-- Value --"))
-    print(df)
+    pd.DataFrame(params, columns=("-- Key --", "-- Value --"))
 
 
 def read_sdhdf_header(f_pth, dset_pth):
@@ -40,8 +41,8 @@ def read_sdhdf_header(f_pth, dset_pth):
     try:
         with h5py.File(f_pth, "r") as h5:
             tb = QTable.read(h5, path=dset_pth)
-    except Exception as e:
-        print("ERROR: failed to read file %s" % f_pth, e)
+    except Exception:
+        pass
 
     return tb
 
@@ -98,11 +99,10 @@ def plot_sdhdf(f, sp, wf):
     """
     h5 = h5py.File(f, "r")
 
-    bp = QTable.read(h5, path="/metadata/beam_params")
+    QTable.read(h5, path="/metadata/beam_params")
     ph = QTable.read(h5, path="/metadata/primary_header")
 
     # display primary header astropy.QTable object
-    print("----------------------------------------------------")
     hdr = read_sdhdf_header(f, "/metadata/primary_header")
     print_hdr(hdr)
 
@@ -110,19 +110,13 @@ def plot_sdhdf(f, sp, wf):
     hdr_ver = float(hdr["HDR_DEFN_VERSION"][0])
 
     # display available beam groups in file
-    print("\n----------------------------------------------------")
-    print("Available beams to plot are:\n")
-    print(bp)
 
     # user selects beam to plot (need single quotes around input for python 2.7)
     beam = input("\nWhich beam do you wish to plot (e.g. 0) ?\n")
     beam_label = "beam_" + beam
 
     # display available sub-band groups in file
-    print("\n----------------------------------------------------")
-    print("Available sub-bands to plot are:\n")
     sb_avail = QTable.read(h5, path=beam_label + "/metadata/band_params")
-    print(sb_avail)
 
     # user selects sub-band to plot (need single quotes around input for python 2.7)
     sb = input("\nWhich sub-band do you wish to plot (e.g. 0) ?\n")
@@ -132,14 +126,11 @@ def plot_sdhdf(f, sp, wf):
         # set paths to data
         sb_data = beam_label + "/" + sb_label + "/astronomy_data/data"
         sb_freq = beam_label + "/" + sb_label + "/astronomy_data/frequency"
-        print("----------------------------------------------------")
-        print("Processing sub-band: %r" % sb)
         # print(h5[sb_freq[:][0]])
         sb_min = h5[sb_freq][0]
         sb_max = h5[sb_freq][-1]
         # print(sb_min, sb_max)
         # exit()
-        print("Freq min: %s Freq max: %s" % (str(sb_min), str(sb_max)))
         # exit()
         zoom = input("Zoom? (y/n)  ")
         if zoom == "y":
@@ -148,7 +139,7 @@ def plot_sdhdf(f, sp, wf):
             z_window_lo = int(zoom_centre) - float(zoom_width)
             z_window_hi = int(zoom_centre) + float(zoom_width)
 
-            for row in range(0, len(sb_avail)):
+            for row in range(len(sb_avail)):
                 if sb_avail["LABEL"][row] == sb_label:
                     # sb_min = sb_avail[row]['LOW_FREQ']
                     # sb_max = sb_avail[row]['HIGH_FREQ']
@@ -159,14 +150,15 @@ def plot_sdhdf(f, sp, wf):
             if z_window_lo >= sb_min and z_window_hi <= sb_max:
                 zoom = True
             else:
+                msg = f"ERROR: input values are not within range of sub-band {sb}"
                 raise ValueError(
-                    "ERROR: input values are not within range of sub-band %s" % sb
+                    msg
                 )
         else:
             zoom = False
-        print("----------------------------------------------------")
     else:
-        raise ValueError("ERROR: sub-band %s does not exist in data file" % sb)
+        msg = f"ERROR: sub-band {sb} does not exist in data file"
+        raise ValueError(msg)
 
     # sb_data = beam_label + '/' + sb_label + '/astronomy_data/data'
     # sb_freq = beam_label + '/' + sb_label + '/astronomy_data/frequency'
@@ -174,58 +166,35 @@ def plot_sdhdf(f, sp, wf):
     # print(h5[sb_freq][0])
     # exit()
 
-    if hdr_ver >= 2.1:
-        n_pol = h5[sb_data].shape[1]
-    else:
-        n_pol = h5[sb_data].shape[2]
+    n_pol = h5[sb_data].shape[1] if hdr_ver >= 2.1 else h5[sb_data].shape[2]
     op = QTable.read(h5, path=beam_label + "/" + sb_label + "/metadata/obs_params")
 
     if ph["CAL_MODE"] == "ON":
         sb_cal_data_on = beam_label + "/" + sb_label + "/calibrator_data/cal_data_on"
-        sb_cal_data_off = beam_label + "/" + sb_label + "/calibrator_data/cal_data_off"
-        sb_cal_freq = beam_label + "/" + sb_label + "/calibrator_data/cal_frequency"
+        beam_label + "/" + sb_label + "/calibrator_data/cal_data_off"
+        beam_label + "/" + sb_label + "/calibrator_data/cal_frequency"
         if hdr_ver >= 2.1:
-            cal_n_pol = h5[sb_cal_data_on].shape[1]
+            h5[sb_cal_data_on].shape[1]
         else:
-            cal_n_pol = h5[sb_cal_data_on].shape[2]
+            h5[sb_cal_data_on].shape[2]
 
-    print("Data array shape: %r" % str(h5[sb_data].shape))
-    print("Frequency array shape: %r" % str(h5[sb_freq].shape))
-    print("Number of polarisations: %r" % n_pol)
 
     if ph["CAL_MODE"] == "ON":
-        print(
-            "Calibration data array shape (cal on): %r" % str(h5[sb_cal_data_on].shape)
-        )
-        print(
-            "Calibration data array shape (cal off): %r"
-            % str(h5[sb_cal_data_off].shape)
-        )
-        print("Calibration frequency array shape: %r" % str(h5[sb_cal_freq].shape))
-        print("Number of polarisations (calibration data): %r" % cal_n_pol)
-    print("----------------------------------------------------")
+        pass
 
     # get range of channels for zoom window
     if zoom is True:
         z_min, z_max = get_channel_range(
             h5[sb_freq], int(zoom_centre), float(zoom_width)
         )
-        print("Zoom enabled")
-        print("Zoom window centred at %s MHz" % int(zoom_centre))
-        print("Zoom window width: %s to %s MHz" % (z_window_lo, z_window_hi))
-        print("Zoom channel min: %i" % z_min)
-        print("Zoom channel max: %i" % z_max)
-        print("----------------------------------------------------")
 
     # plot spectra
-    if n_pol == 2 or n_pol == 4:
+    if n_pol in (2, 4):
         plt.figure(figsize=(8, 8))
         color = ("b", "g", "r", "c")
         for ii in range(n_pol):
-            print("Processing polarisation %r..." % ii)
             lc = color[ii]
             plt.subplot(n_pol, 1, ii + 1)
-            print("Averaging over integrations\n")
             np.mean(h5[sb_data], axis=0)
             if ii <= 1:
                 plt.yscale("log")
@@ -281,7 +250,7 @@ def plot_sdhdf(f, sp, wf):
         plt.xlabel("Frequency [MHz]")
         plt.ylabel("Flux [counts]")
 
-    plt.suptitle("Mean Flux - Sub-band %r" % sb, fontsize=14)
+    plt.suptitle(f"Mean Flux - Sub-band {sb!r}", fontsize=14)
     plt.subplots_adjust(top=0.9)
     if wf is True:
         plt.show(block=False)
@@ -291,7 +260,7 @@ def plot_sdhdf(f, sp, wf):
     # plot waterfall data (time/frequency)
     if wf is True:
         plt.figure(figsize=(10, 8))
-        plt.title("Waterfall - Sub-band %r" % sb, fontsize=14)
+        plt.title(f"Waterfall - Sub-band {sb!r}", fontsize=14)
         if zoom is True:
             if hdr_ver >= 2.1:
                 av = np.mean(h5[sb_data], axis=3)

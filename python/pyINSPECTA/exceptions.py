@@ -1,8 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""SHDF Error classes"""
+"""SDHDF Error classes"""
+
+from __future__ import annotations
+
 
 class VerificationError(Exception):
-    """ Error raised if Verification fails """
+    """Error raised if Verification fails"""
+
     def __init__(self, msg):
         super().__init__(self, msg)

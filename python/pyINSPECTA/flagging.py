@@ -1,21 +1,15 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """SDHDF flagging utilities"""
 
-import warnings
-from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from __future__ import annotations
 
-import h5py
-import matplotlib.pyplot as plt
+import warnings
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pkg_resources
 from astropy.stats import mad_std, sigma_clip
-from astropy.table import Table
-from tqdm.auto import tqdm
-from xarray import DataArray, Dataset, Variable
+from xarray import DataArray
 
 
 class AutoFlagError(Exception):
@@ -32,10 +26,9 @@ def get_persistent_rfi(telescope: str = "Parkes") -> pd.DataFrame:
         "pyINSPECTA", f"{telescope.lower()}_rfi.csv"
     )
     if not Path(rfi_file).exists():
-        raise NotImplementedError(
-            f"Persistent RFI file for {telescope} not found at '{Path(rfi_file).absolute()}'."
-        )
-    rfi_df = pd.read_csv(
+        msg = f"Persistent RFI file for {telescope} not found at '{Path(rfi_file).absolute()}'."
+        raise NotImplementedError(msg)
+    return pd.read_csv(
         rfi_file,
         sep=",",
         # skip_blank_lines=True,
@@ -51,19 +44,20 @@ def get_persistent_rfi(telescope: str = "Parkes") -> pd.DataFrame:
             "text string for label",
         ],
     )
-    return rfi_df
 
 
-def box_filter(spectrum, sigma=3, n_windows=100):
+def box_filter(spectrum: np.ndarray | DataArray, sigma=3, n_windows=100):
     """
     Filter a spectrum using a box filter.
     """
     # Divide spectrum into windows
-    window_size = len(spectrum) // n_windows
-    dat_filt = np.zeros_like(spectrum).astype(bool)
+    spectrum_squeezed = spectrum.squeeze()
+    window_size = len(spectrum_squeezed) // n_windows
+    dat_filt = np.zeros_like(spectrum_squeezed).astype(bool)
+
     # Iterate through windows
     for i in range(n_windows):
-        _dat = spectrum[i * window_size : window_size + i * window_size]
+        _dat = spectrum_squeezed[i * window_size : window_size + i * window_size]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             # Use sigma clipping to remove outliers
@@ -71,4 +65,10 @@ def box_filter(spectrum, sigma=3, n_windows=100):
                 _dat, sigma=sigma, maxiters=None, stdfunc=mad_std, masked=True
             )
         dat_filt[i * window_size : window_size + i * window_size] = _dat_filt.mask
+
+    dat_filt = dat_filt.reshape(spectrum.shape)
+
+    if isinstance(spectrum, DataArray):
+        return DataArray(dat_filt, dims=spectrum.dims, coords=spectrum.coords)
+
     return dat_filt

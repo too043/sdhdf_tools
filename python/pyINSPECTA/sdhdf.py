@@ -1,24 +1,21 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Core SDHDF module
-"""
+"""Core SDHDF module"""
 
-import inspect
+from __future__ import annotations
+
 import json
-from contextlib import nullcontext
+import logging
 from dataclasses import dataclass
+from importlib import resources
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
 
+import dask.array as da
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pkg_resources
 import xarray as xr
 from astropy.table import Table
-from dask.diagnostics import ProgressBar
-from dask.distributed import Client, get_client, get_task_stream, progress
+from dask.distributed import Client
 from tqdm.auto import tqdm
 from xarray import DataArray, Dataset, Variable
 
@@ -27,23 +24,48 @@ from pyINSPECTA.logger import logger
 from pyINSPECTA.tables import SDHDFTable
 
 
-def _get_sdhdf_version(filename: Path) -> str:
-    """Get the SDHDF version of a file
+def _get_sdhdf_version(filename: Path) -> tuple[float, Path]:
+    """Get the SDHDF version of a file and return the path
+       to the definition template
 
     Args:
         filename (Path): Path to the SDHDF file
 
     Returns:
         str: SDHDF version
+        str: Path to definition json template
     """
     with h5py.File(filename, "r") as f:
-        # Need to hardcode this path for now
-        # Assuming it always exists
+        primary_header = SDHDFTable(f["metadata/primary_header"], 0.0)
+        version = None
+        if "HDR_DEFN_VERSION" in primary_header:
+            hdr_key = "HDR_DEFN_VERSION"
+            if "1.9" in str(primary_header[hdr_key]):
+                version = float("1.9")
+            else:
+                version = float(primary_header[hdr_key])
+        else:
+            hdr_key = "HEADER_DEFINITION_VERSION"
+            # compound attributes for SDHDF >=4.0
+            version = float(primary_header.attrs[hdr_key][0][2].decode())
+        if version is None:
+            msg = f"SDHDF version not found in file '{filename}'"
+            raise ValueError(msg)
+        if version <= 2.0:
+            version = 2.0
+        elif (version > 2.0) and (version <= 2.1):
+            version = 2.1
+        elif (version >= 2.2) and (version <= 2.9):
+            version = 2.9
+
         try:
-            version = f["metadata/primary_header"]["HDR_DEFN_VERSION"][0].decode()
-        except KeyError:
-            raise KeyError(f"SDHDF version not found in file '{filename}'")
-    return version
+            with resources.path("pyINSPECTA", "definitions") as definition_dir:
+                definition_file = definition_dir / f"sdhdf_def_v{version}.json"
+        except ValueError as e:
+            msg = f"SDHDF definition template {definition_file} not found."
+            raise ValueError(msg) from e
+
+    return version, definition_file
 
 
 @dataclass
@@ -55,62 +77,135 @@ class MetaData:
 
     Attributes:
         beam_params (SDHDFTable): The beam parameters
-        history (SDHDFTable): The history as a pandas SDHDFTable
-        primary_header (SDHDFTable): The primary header
-        backend_config (SDHDFTable): The backend configuration
-        cal_backend_config (SDHDFTable): The calibration backend configuration
+        history (SDHDFTable): File history
+        primary_header (SDHDFTable): Primary header
+        backend_config (SDHDFTable): Backend configuration
+        cal_backend_config (SDHDFTable): Calibration backend configuration
+        software (SDHDFTable): Software versions used in creation of the file
+        schedule (SDHDFTable): Observation schedule metadata (if available)
 
     Methods:
-        print_metadata: Quickly list the metadata
+        print_obs_metadata: Quickly list the observation metadata
+        print_obs_config: Quickly list the observation configuration
+        write: Write metadata to file [NOT YET IMPLEMENTED]
 
     """
+
     filename: Path
 
     def __post_init__(self):
-        version = _get_sdhdf_version(self.filename)
-        defintion_file = pkg_resources.resource_filename(
-            "pyINSPECTA", f"definitions/sdhdf_def_v{version}.json"
-        )
-        with open(defintion_file, "r") as f:
-            self.definition = json.load(f)
-        with h5py.File(self.filename, "r") as f:
-            # Get the metadata and configs
-            for name in ("metadata", "config"):
-                for key, val in self.definition[name].items():
-                    tab = SDHDFTable(f[name][val])
-                    self.__setattr__(key, tab)
+        version, definition_file = _get_sdhdf_version(self.filename)
+        logger.info(f"SDHDF version: {version}")
+        logger.debug(f"Loading SDHDF definition template: {definition_file}")
 
-    def print_metadata(self, format: str = "grid") -> None:
-        """Print the metadata to the terminal"""
-        for label in self.definition["metadata"].keys():
-            df = self.__dict__[label]
-            logger.info(f"{label}:")
-            print(df.T.to_markdown(tablefmt=format, headers=[]))
+        # load the definition
+        with definition_file.open("r") as f:
+            definition = dict(json.load(f))
 
-    def print_config(self, format: str = "grid") -> None:
-        """Print the configuration to the terminal"""
-        for label in self.definition["config"].keys():
-            df = self.__dict__[label]
-            logger.info(f"{label}:")
-            print(df.T.to_markdown(tablefmt=format, headers=[]))
+        self.definition = definition
+        self.version = version
 
+        with h5py.File(self.filename, "r") as h5file:
+            h5file.visititems(
+                lambda name, obj: logger.debug(f"Name: {name} Object: {obj}")
+            )
+            for top_group in h5file:
+                is_beam = "beam" in top_group
 
-    def write(self, filename: Union[str, Path], overwrite:bool=False) -> pd.DataFrame:
+                base_path = f"/{top_group}" if is_beam else ""
+                def_values = (
+                    definition.get(top_group) if not is_beam else definition.get("beam")
+                )
+
+                if def_values is None:
+                    logger.warning(
+                        f"No definition found for group '{top_group}'. Ignoring..."
+                    )
+                    continue
+                self._get_metadata(def_values, base_path, h5file)
+
+    def _get_metadata(
+        self, def_values: dict, base_path: str, h5file: h5py.File
+    ) -> None:
+        """Set the metadata attributes from the definition
+
+        Args:
+            def_values (dict): Definition values
+            base_path (str): Base path in the h5file
+            h5file (h5py.File): h5py file object
+        """
+        for key, val in def_values.items():
+            self._set_attributes(key, val, base_path, h5file)
+
+    def _set_attributes(
+        self, key: str, val: str | dict, base_path: str, h5file: h5py.File
+    ) -> None:
+        """Recursively set the metadata attributes
+
+        Args:
+            key (str): The key in the definition
+            val (str | dict): The value in the definition
+            base_path (str): Base path in the h5file
+            h5file (h5py.File): h5py file object
+        """
+        if key == "attributes":
+            return None
+        if isinstance(val, dict):
+            if key == "band":
+                band_paths = [k for k in h5file[base_path] if "band" in k]
+                for band_path in band_paths:
+                    self._get_metadata(
+                        val, base_path=f"{base_path}/{band_path}", h5file=h5file
+                    )
+                return None
+            self._get_metadata(val, base_path=base_path, h5file=h5file)
+            return None
+        path = f"{base_path}/{val}"
+        logger.debug(f"Path: {path}")
+        if path not in h5file:
+            logger.warning(f"Path '{path}' not found in file")
+            return None
+        attr = SDHDFTable(h5file[path], self.version)
+
+        return setattr(self, key, attr)
+
+    def print_obs_metadata(self, format: str = "grid") -> None:
+        """Print observation metadata to the terminal"""
+        _ = format
+        for key in self.definition["metadata"]:
+            if key in self.__dict__:
+                self.__dict__[key]
+            else:
+                logger.warning(f"No metadata found for key '{key}'. Ignoring...")
+
+    def print_obs_config(self, format: str = "grid") -> None:
+        """Print the observation configuration to the terminal"""
+        _ = format
+        for key in self.definition["config"]:
+            if key in self.__dict__:
+                self.__dict__[key]
+            else:
+                logger.warning(f"No metadata found for key '{key}'. Ignoring...")
+
+    def write(self, filename: str | Path, overwrite: bool = False) -> pd.DataFrame:
         """Write the metadata to a file
 
         Args:
-            filename (Union[str, Path]): Path to the output file
+            filename (str | Path): Path to the output file
         """
-        filename = Path(filename)
+        if isinstance(filename, str):
+            filename = Path(filename)
 
         if filename.exists() and not overwrite:
-            raise FileExistsError(f"File '{filename}' already exists")
+            msg = f"File '{filename}' already exists"
+            raise FileExistsError(msg)
         for name in ("metadata", "config"):
             for key, val in tqdm(self.definition[name].items(), desc=f"Writing {name}"):
-                df = self.__dict__[key]
-                df.to_hdf(filename, key=f"{val}", mode="a", data_columns=True)
+                meta_df = self.__dict__[key]
+                meta_df.to_hdf(filename, key=f"{val}", mode="a", data_columns=True)
 
         return history.generate_history_row()
+
 
 @dataclass
 class SubBand:
@@ -140,7 +235,7 @@ class SubBand:
     definition: dict
     beam_label: str
     in_memory: bool = False
-    client: Union[Client, None] = None
+    client: Client | None = None
 
     def __post_init__(self):
         # Get the astronomy data
@@ -152,24 +247,85 @@ class SubBand:
     def _get_cal(self):
         return
 
+    @staticmethod
+    def _get_data_dimensions(
+        dim_labels: str,
+        data_shape: tuple[int],
+        meta: SDHDFTable,
+    ) -> list[str] | np.ndarray:
+        if isinstance(dim_labels, np.ndarray):
+            return dim_labels
+        if isinstance(dim_labels, bytes):
+            dim_labels = dim_labels.decode()
+        if dim_labels != "NOT SET":
+            return dim_labels.split(",")
+
+        logger.warning("No dimension labels found in file! Using default labels.")
+        usual_dims = ["time", "polarization", "channel", "bin"]
+        dims = []
+        for i, shape in enumerate(data_shape):
+            if shape == len(meta):
+                dims.append("time")
+            else:
+                dims.append(usual_dims[i])
+        return dims
+
+    @staticmethod
+    def _get_freq_dimensions(
+        dims: list[str],
+        freq_dim_labels: str,
+        data_shape: tuple[int],
+        freq_shape: tuple[int],
+    ) -> list[str] | np.ndarray:
+        if isinstance(freq_dim_labels, np.ndarray):
+            return freq_dim_labels
+        if isinstance(freq_dim_labels, bytes):
+            freq_dim_labels = freq_dim_labels.decode()
+        if freq_dim_labels != "NOT SET":
+            return freq_dim_labels.split(",")
+
+        logger.warning(
+            "No frequency dimension labels found in file! Attempting to match dimensions to data shape..."
+        )
+        # Attempt to match the dimensions to the data shape
+        freq_dims = []
+        for i_shape in freq_shape:
+            for i in range(len(data_shape)):
+                if i_shape == data_shape[i]:
+                    freq_dims.append(dims[i])
+                    break
+
+        if len(freq_dims) == len(freq_shape):
+            return freq_dims
+
+        logger.warning(
+            "Could not automatically match frequency dimensions to data dimensions! Using default labels."
+        )
+        return [f"freq_{i}" for i in range(len(freq_shape))]
+
     def _get_data(self):
         """Get the astronomy sub-band data"""
-        astro_def = self.definition["subband"]["astronomy"]
+        astro_def = self.definition["beam"]["band"]["astronomy"]
+        meta_def = self.definition["beam"]["band"]["metadata"]
+        version = self.definition["version"]
         sb_path = f"{self.beam_label}/{self.label}"
 
         with h5py.File(self.filename, "r") as h5:
             data_path = f"{sb_path}/{astro_def['data']}"
             freq_path = f"{sb_path}/{astro_def['frequency']}"
-            meta_path = f"{sb_path}/{astro_def['metadata']}"
+            meta_path = f"{sb_path}/{meta_def['obs_params']}"
 
             data = h5[data_path]
             freqs = h5[freq_path]
-            meta = SDHDFTable(h5[meta_path])
+            meta = SDHDFTable(h5[meta_path], version)
             self.metadata = meta
 
-            # Get the flags (if they exists)
-            has_flags = "flags" in astro_def.keys()
-            if has_flags:
+            # Get the flags (if they exist)
+            if (
+                "flags" in astro_def
+                and astro_def["flags"]
+                and f"{sb_path}/{astro_def['flags']}" in h5
+            ):
                 flag_path = f"{sb_path}/{astro_def['flags']}"
                 flags = h5[flag_path][:]
                 # Ensure flag has same shape as data
@@ -177,20 +333,16 @@ class SubBand:
                 for i, s in enumerate(data.shape):
                     if i > len(flag_reshape.shape) - 1:
                         flag_reshape = np.expand_dims(flag_reshape, axis=-1)
+                    elif flag_reshape.shape[i] == s:
+                        continue
                     else:
-                        if flag_reshape.shape[i] == s:
-                            continue
-                        else:
-                            flag_reshape = np.expand_dims(flag_reshape, axis=i)
+                        flag_reshape = np.expand_dims(flag_reshape, axis=i)
                 flags = flag_reshape
             else:
                 logger.warning(
-                    f"""
-                    No flags found for sub-band '{self.label}' in file '{self.filename}'!
-                    SDHDF version is {self.definition['version']}.
-                    Flags will be set to all zeros.
-                    """
+                    f"No flags found for sub-band '{self.label}' in file '{self.filename}'!"
                 )
+                logger.warning(f"Band '{self.label}' flags will be set to all zeros.")
                 flags = np.zeros_like(data)
 
             # Load into memory if requested
@@ -199,53 +351,106 @@ class SubBand:
                 data = np.array(data)
                 freqs = np.array(freqs)
                 flags = np.array(flags)
+            else:
+                data = da.from_array(data[:], chunks="auto")
+                freqs = da.from_array(freqs[:], chunks="auto")
+                flags = da.from_array(flags[:], chunks="auto")
 
             # Process into xarray
-            coords = {col: ("time", meta[col].values) for col in meta.table.columns}
-            coords["frequency"] = Variable(
-                dims="frequency",
-                data=freqs,
-                attrs={"units": h5[freq_path].attrs["UNIT"]},
-            )
-            dims = h5[data_path].attrs["DIMENSION_LABELS"]
+            coords = {col: ("time", meta[col].to_numpy()) for col in meta.table.columns}
 
-            # Need to isel beam 0 here - it will always be dimension 0
+            dim_labels = h5[data_path].attrs["DIMENSION_LABELS"]
+            if isinstance(dim_labels, bytes):
+                dim_labels = dim_labels.decode()
+            elif isinstance(dim_labels, np.ndarray):
+                dim_labels = dim_labels.astype(str)
+
+            if "polarisation" in dim_labels:
+                dim_labels[1] = "polarization"
+
+            dims = self._get_data_dimensions(
+                dim_labels=dim_labels,
+                data_shape=data.shape,
+                meta=meta,
+            )
+            if "DIMENSION_LABELS" in h5[freq_path].attrs:
+                freq_dim_labels = h5[freq_path].attrs["DIMENSION_LABELS"]
+            else:
+                freq_dim_labels = "NOT SET"
+            if isinstance(freq_dim_labels, bytes):
+                freq_dim_labels = freq_dim_labels.decode()
+            elif isinstance(freq_dim_labels, np.ndarray):
+                freq_dim_labels = freq_dim_labels.astype(str)
+
+            freq_dims = self._get_freq_dimensions(
+                dims=dims,
+                freq_dim_labels=freq_dim_labels,
+                data_shape=data.shape,
+                freq_shape=freqs.shape,
+            )
+            if "UNIT" in h5[freq_path].attrs:
+                freq_unit = h5[freq_path].attrs["UNIT"]
+                if isinstance(h5[freq_path].attrs["UNIT"], bytes):
+                    if float(version) >= 4.0:
+                        freq_unit = freq_unit[0][2].decode()
+                    else:
+                        freq_unit = freq_unit.decode()
+            else:
+                freq_unit = "NOT SET"
+            coords["frequency"] = Variable(
+                dims=freq_dims,
+                data=freqs,
+                attrs={"units": freq_unit},
+            ).squeeze()
+
+            attrs = dict(h5[data_path].attrs)
+            for key, val in attrs.items():
+                if float(version) >= 4.0:
+                    if isinstance(val, bytes):
+                        attrs[key] = val[0][2].decode()
+                    elif "DIMENSION" in key:
+                        attrs[key] = val
+                    else:
+                        attrs[key] = val[0][2].decode()
+                elif isinstance(val, bytes):
+                    attrs[key] = val.decode()
+                else:
+                    attrs[key] = val
+
             data_xr = DataArray(
                 data,
                 dims=dims,
                 coords=coords,
                 name=f"{self.label}_data",
-                attrs=dict(h5[data_path].attrs),
+                attrs=attrs,
             )
             # Check if data has beam dimension
             if "beam" in data_xr.dims:
                 data_xr = data_xr.isel(beam=0)
             data_xr.attrs["units"] = data_xr.UNIT
-            self.attrs = dict(h5[data_path].attrs)
+            self.attrs = attrs
 
             flag_xr = DataArray(
                 flags,
                 dims=dims,
                 coords=coords,
                 name=f"{self.label}_flag",
-            )
+            ).squeeze()
             # Same as above
             if "beam" in flag_xr.dims:
                 flag_xr = flag_xr.isel(beam=0)
 
-            astronomy_dataset = Dataset(
+            return Dataset(
                 {
                     "data": data_xr,
                     "flag": flag_xr,
-                    "metadata": (("time", "meta"), meta),
-                }
+                    "metadata": xr.DataArray(meta.table, dims=["time", "meta"]),
+                },
             )
-            return astronomy_dataset
 
     def plot_waterfall(
         self,
         polarization: int = 0,
-        bin: int = 0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -256,28 +461,38 @@ class SubBand:
             bin (int, optional): Bin to select. Defaults to 0.
             flag (bool, optional): Blank flagged data. Defaults to False.
         """
-        sub_data = self.astronomy_dataset.isel(polarization=polarization, bin=bin)
-        if flag:
-            sub_data = sub_data.where(sub_data.flag == 0)
-        sub_data.data.plot(**plot_kwargs)
-        ax = plt.gca()
+        sub_data = self.astronomy_dataset.isel(
+            polarization=polarization,
+        )
+        if sub_data.dims["time"] == 1:
+            logger.warning("Cannot create a waterfall plot with a single integration!")
+            ax = None
+        else:
+            if flag:
+                sub_data = sub_data.where(sub_data.flag == 0)
+            sub_data.data.plot(x="frequency", **plot_kwargs)
+            ax = plt.gca()
+            ax.set_title(f"Waterfall Plot (flagged = {flag!s})", fontsize=10)
+
         return ax
 
     def plot_spectrum(
         self,
-        time,
+        time: int,
         polarization: int = 0,
-        bin: int = 0,
         flag: bool = False,
         **plot_kwargs,
     ):
         sub_data = self.astronomy_dataset.isel(
-            time=time, polarization=polarization, bin=bin
+            time=time,
+            polarization=polarization,
         )
         if flag:
             sub_data = sub_data.where(sub_data.flag == 0)
         sub_data.data.plot(**plot_kwargs)
         ax = plt.gca()
+        ax.set_title(f"Spectrum (flagged = {flag!s})", fontsize=10)
+
         return ax
 
     def autoflag(self, sigma=3, n_windows=100):
@@ -286,30 +501,33 @@ class SubBand:
             ~self.astronomy_dataset.flag.astype(bool)
         )
         # Set chunks for parallel processing
-        chunks = {d: 1 for d in data_xr_flg.dims}
+        chunks = dict.fromkeys(data_xr_flg.dims, 1)
         chunks["frequency"] = len(self.astronomy_dataset.data.frequency)
         data_xr_flg = data_xr_flg.chunk(chunks)
-        mask = xr.apply_ufunc(
-            flagging.box_filter,
-            data_xr_flg,
-            input_core_dims=[["frequency"]],
-            output_core_dims=[["frequency"]],
-            kwargs={"sigma": sigma, "n_windows": n_windows},
-            dask="parallelized",
-            vectorize=True,
-            output_dtypes=(bool),
+        mask = (
+            xr.DataArray(
+                data_xr_flg.data.map_blocks(
+                    flagging.box_filter,
+                    sigma=sigma,
+                    n_windows=n_windows,
+                    dtype=bool,
+                ),
+                dims=data_xr_flg.dims,
+                coords=data_xr_flg.coords,
+            )
+            .sum(dim="polarization")
+            .astype(bool)
         )
         self.astronomy_dataset["flag"] = mask.astype(int).compute()
-        hist = history.generate_history_row()
-        return hist
+        return history.generate_history_row()
 
     def decimate(
-        self, bins: Union[float, int], axis: str = "frequency", use_median: bool = False
+        self, bins: float | int, axis: str = "frequency", use_median: bool = False
     ) -> pd.DataFrame:
         """Average the data along the an axis
 
         Args:
-            bins (Union[float, int]): If int, the number of channels to bin in an average.
+            bins (float | int): If int, the number of channels to bin in an average.
                 If float, the desired width of a channel after averaging.
             axis (str, optional): The axis to decimate along. Defaults to "frequency".
             use_median (bool, optional): Use the median instead of the mean. Defaults to False.
@@ -323,10 +541,9 @@ class SubBand:
         """
 
         if axis == "time":
-            # TODO: Figure out how to decimate along the time axis - includeing the metadata / coords
-            raise NotImplementedError(
-                "Decimation along the time axis is not yet implemented"
-            )
+            # TODO: Figure out how to decimate along the time axis - including the metadata / coords
+            msg = "Decimation along the time axis is not yet implemented"
+            raise NotImplementedError(msg)
         dataset = self.astronomy_dataset
         if isinstance(bins, float):
             # Convert to integer number of bins
@@ -342,10 +559,7 @@ class SubBand:
 
         logger.info(f"Using {bins} channels per bin")
 
-
-
         # Apply CASA-style decimation
-
         flagged = dataset.where(dataset.flag == 0)
         unflagged = dataset
 
@@ -395,38 +609,47 @@ class SubBand:
             attrs=dataset.attrs,
         )
         self.astronomy_dataset = dataset_dec
-        hist = history.generate_history_row()
-        return hist
+        return history.generate_history_row()
 
     def _write_astronomy_dataset(self, filename: Path) -> pd.DataFrame:
-        astro_def = self.definition["subband"]["astronomy"]
+        astro_def = self.definition["beam"]["band"]["astronomy"]
         sb_path = f"{self.beam_label}/{self.label}"
         with h5py.File(filename, "w") as f:
-            f[f"{sb_path}/{astro_def['data']}"] = self.astronomy_dataset.data.values
-            f[f"{sb_path}/{astro_def['frequency']}"] = self.astronomy_dataset.frequency.values
-            if "flags" in self.definition["subband"]["astronomy"]:
-                f[f"{sb_path}/{astro_def['flags']}"] = self.astronomy_dataset.flag.values
+            f[f"{sb_path}/{astro_def['data']}"] = self.astronomy_dataset.data.to_numpy()
+            f[f"{sb_path}/{astro_def['frequency']}"] = (
+                self.astronomy_dataset.frequency.to_numpy()
+            )
+            if "flags" in self.definition["beam"]["band"]["astronomy"]:
+                f[f"{sb_path}/{astro_def['flags']}"] = (
+                    self.astronomy_dataset.flag.to_numpy()
+                )
             else:
                 logger.warning("No flags in definition")
                 logger.info("Saving flags to /astronomy_data/flags")
-                f[f"{sb_path}/astronomy_data/flags"] = self.astronomy_dataset.flag.values
+                f[f"{sb_path}/astronomy_data/flags"] = (
+                    self.astronomy_dataset.flag.to_numpy()
+                )
 
         self.astronomy_dataset.metadata.to_dataframe().to_hdf(
             filename,
-            f"{sb_path}/{astro_def['metadata']}",
+            f"{sb_path}/metadata",
+            # f"{sb_path}/{astro_def['metadata']}",
             mode="a",
         )
         return history.generate_history_row()
 
     def _write_cal_dataset(self, filename: Path):
         # TODO: Write the cal dataset
+        _ = filename
         return history.generate_history_row()
 
-    def write(self, filename: Union[str, Path], overwrite: bool = False) -> List[pd.DataFrame]:
+    def write(
+        self, filename: str | Path, overwrite: bool = False
+    ) -> list[pd.DataFrame]:
         """Write the dataset to a file
 
         Args:
-            filename (Union[str, Path]): The filename to write to
+            filename (str | Path): The filename to write to
             overwrite (bool, optional): Overwrite the file if it exists. Defaults to False.
 
         Raises:
@@ -436,13 +659,13 @@ class SubBand:
         if isinstance(filename, str):
             filename = Path(filename)
         if filename.exists() and not overwrite:
-            raise FileExistsError(f"{filename} already exists")
+            msg = f"{filename} already exists"
+            raise FileExistsError(msg)
 
         astro_hist = self._write_astronomy_dataset(filename)
         cal_hist = self._write_cal_dataset(filename)
 
         return [astro_hist, cal_hist, history.generate_history_row()]
-
 
 
 @dataclass
@@ -457,7 +680,7 @@ class Beam:
         client (Client, optional): Dask client. Defaults to None.
 
     Attributes:
-        subbands (List[SubBand]): A list of subbands
+        subbands (list[SubBand]): A list of subbands
 
     Methods:
         plot_waterfall: Plot a waterfall plot of the data
@@ -470,11 +693,12 @@ class Beam:
     filename: Path
     definition: dict
     in_memory: bool = False
-    client: Union[Client, None] = None
+    client: Client | None = None
 
     def __post_init__(self):
+        meta_def = self.definition["beam"]["metadata"]
         with h5py.File(self.filename, "r") as f:
-            sb_avail = Table.read(f, path=self.label + "/metadata/band_params")
+            sb_avail = Table.read(f, path=self.label + f"/{meta_def['band_params']}")
             self.subbands = [
                 SubBand(
                     label=sb,
@@ -486,14 +710,14 @@ class Beam:
                 )
                 for sb in sb_avail["LABEL"]
             ]
+
             for sb in self.subbands:
                 self.__dict__[sb.label] = sb
 
     def plot_waterfall(
         self,
-        subband: Union[int, str],
+        subband: int | str,
         polarization: int = 0,
-        bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -502,20 +726,17 @@ class Beam:
         elif isinstance(subband, str):
             subband = self.__dict__[subband]
 
-        ax = subband.plot_waterfall(
+        return subband.plot_waterfall(
             polarization=polarization,
-            bin=bin,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def plot_spectrum(
         self,
-        subband: Union[int, str],
+        subband: int | str,
         time: int = 0,
         polarization: int = 0,
-        bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -524,38 +745,36 @@ class Beam:
         elif isinstance(subband, str):
             subband = self.__dict__[subband]
 
-        ax = subband.plot_spectrum(
+        return subband.plot_spectrum(
             time=time,
             polarization=polarization,
-            bin=bin,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def plot_wide(
         self,
         time: int = 0,
         polarization: int = 0,
-        bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
         fig, ax = plt.subplots()
-        for i, sb in enumerate(self.subbands):
+        for _i, sb in enumerate(self.subbands):
             sb.plot_spectrum(
                 time=time,
                 polarization=polarization,
-                bin=bin,
                 flag=flag,
                 ax=ax,
                 label=sb.label,
                 **plot_kwargs,
             )
         ax.legend()
+        ax.set_title(f"Wide-band Spectrum (flagged = {flag!s})", fontsize=10)
+
         return ax
 
-    def autoflag(self, sigma=3, n_windows=100) -> List[pd.DataFrame]:
+    def autoflag(self, sigma=3, n_windows=100) -> list[pd.DataFrame]:
         """Automatic flagging using rolling sigma clipping"""
         hists = []
         for sb in tqdm(self.subbands, desc="Flagging subbands"):
@@ -567,18 +786,18 @@ class Beam:
         return hists
 
     def decimate(
-        self, bins: Union[float, int], axis: str = "frequency", use_median: bool = False
-    ) -> List[pd.DataFrame]:
+        self, bins: float | int, axis: str = "frequency", use_median: bool = False
+    ) -> list[pd.DataFrame]:
         """Decimate the data
 
         Args:
-            bins (Union[float, int]): If int, the number of channels to bin in an average.
+            bins (float | int): If int, the number of channels to bin in an average.
                 If float, the desired width of a channel after averaging.
             axis (str, optional): The axis to decimate along. Defaults to "frequency".
             use_median (bool, optional): Use the median instead of the mean. Defaults to False.
 
         Returns:
-            List[pd.DataFrame]: List of history rows
+            list[pd.DataFrame]: list of history rows
         """
         hists = []
         for sb in tqdm(self.subbands, desc="Decimating subbands"):
@@ -590,22 +809,23 @@ class Beam:
             hists.append(hist)
         return hists
 
-
-    def write(self, filename: Union[str, Path], overwrite: bool = False) -> List[pd.DataFrame]:
+    def write(
+        self, filename: str | Path, overwrite: bool = False
+    ) -> list[pd.DataFrame]:
         """Write the data to a new file
 
         Args:
-            filename (Union[str, Path]): The filename to write to
+            filename (str | Path): The filename to write to
             overwrite (bool, optional): Overwrite the file if it exists. Defaults to False.
 
         Returns:
-            List[pd.DataFrame]: List of history rows
+            list[pd.DataFrame]: list of history rows
         """
         hists = []
         for sb in tqdm(self.subbands, "Writing subbands"):
             hists.extend(sb.write(filename, overwrite=overwrite))
 
-        return hists + [history.generate_history_row()]
+        return [*hists, history.generate_history_row()]
 
 
 @dataclass
@@ -619,13 +839,13 @@ class SDHDF:
 
     Attributes:
         metadata (MetaData): Observation metadata
-        beams (List[Beam]): List of beams
+        beams (list[Beam]): list of beams
 
     Methods:
         plot_waterfall: Waterfall plot of the data
         plot_spectrum: Spectrum plot of the data
         plot_wide: Plot spectra from all subbands
-        print_metadata: List the metadata in the file
+        print_obs_metadata: list the observation metadata in the file
         write: Write the data to a new file
 
     """
@@ -658,10 +878,9 @@ class SDHDF:
 
     def plot_waterfall(
         self,
-        beam: Union[int, str],
-        subband: Union[int, str],
+        beam: int | str,
+        subband: int | str,
         polarization: int = 0,
-        bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -671,29 +890,25 @@ class SDHDF:
             beam (int | str): Beam to select.
             subband (int | str): Subband to select.
             polarization (int, optional): Polarization to select. Defaults to 0.
-            bin (int, optional): Bin to select. Defaults to 0.
             flag (bool, optional): Blank flagged data. Defaults to False.
         """
         if isinstance(beam, int):
             beam = self.beams[beam]
         elif isinstance(beam, str):
             beam = self.__dict__[beam]
-        ax = beam.plot_waterfall(
+        return beam.plot_waterfall(
             subband=subband,
             polarization=polarization,
-            bin=bin,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def plot_spectrum(
         self,
-        beam: Union[int, str],
-        subband: Union[int, str],
+        beam: int | str,
+        subband: int | str,
         time: int = 0,
         polarization: int = 0,
-        bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -702,22 +917,19 @@ class SDHDF:
         elif isinstance(beam, str):
             beam = self.__dict__[beam]
 
-        ax = beam.plot_spectrum(
+        return beam.plot_spectrum(
             subband=subband,
             time=time,
             polarization=polarization,
-            bin=bin,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
     def plot_wide(
         self,
-        beam: Union[int, str],
+        beam: int | str,
         time: int = 0,
         polarization: int = 0,
-        bin=0,
         flag: bool = False,
         **plot_kwargs,
     ):
@@ -726,56 +938,64 @@ class SDHDF:
         elif isinstance(beam, str):
             beam = self.__dict__[beam]
 
-        ax = beam.plot_wide(
+        return beam.plot_wide(
             time=time,
             polarization=polarization,
-            bin=bin,
             flag=flag,
             **plot_kwargs,
         )
-        return ax
 
-    def print_metadata(self, format: str = "grid"):
-        self.metadata.print_metadata(format=format)
+    def print_obs_metadata(self, format: str = "fancy_outline"):
+        self.metadata.print_obs_metadata(format=format)
 
-    def print_config(self):
-        self.metadata.print_config()
+    def print_obs_config(self, format: str = "fancy_outline"):
+        self.metadata.print_obs_config(format=format)
 
-    def flag_persistent_rfi(self):
+    def flag_persistent_rfi(self) -> pd.DataFrame:
         """Flag persistent RFI in all subbands."""
-        telescope = self.metadata.primary_header["TELESCOPE"][0]
+
+        if "TELESCOPE" in self.metadata.primary_header:
+            telescope = self.metadata.primary_header["TELESCOPE"][0]
+            logging.info("Using persistent RFI lookup table for Murriyang")
+        else:
+            logger.warning(
+                "No telescope information found in file! Guessing `Parkes`..."
+            )
+            telescope = "Parkes"
         rfi = flagging.get_persistent_rfi(telescope=telescope)
-        for i, x in tqdm(
+        for _i, x in tqdm(
             rfi.iterrows(), desc="Flagging persistent RFI", total=len(rfi)
         ):
             for beam in self.beams:
                 for sb in beam.subbands:
-                    sb.astronomy_dataset.flag.loc[
-                        dict(frequency=slice(x["freq0 MHz"], x["freq1 MHz"]))
-                    ] = 1
-        row = history.generate_history_row()
-        self.metadata.history = pd.concat([self.metadata.history, row])
+                    freqs = sb.astronomy_dataset.frequency
+                    low_freq, high_freq = x["freq0 MHz"], x["freq1 MHz"]
+                    flags = (freqs > low_freq) & (freqs < high_freq)
+                    sb.astronomy_dataset["flag"] = sb.astronomy_dataset.flag.where(
+                        flags, 1, 0
+                    )
+        return history.generate_history_row()
 
     def auto_flag_rfi(
         self,
         sigma=3,
         n_windows=100,
+        flag_persistent: bool = True,
     ):
         """Automatic flagging using rolling sigma clipping"""
-        self.flag_persistent_rfi()
+        if flag_persistent:
+            self.flag_persistent_rfi()
         hists = []
         for beam in tqdm(self.beams, desc="Flagging beams"):
             hists.extend(beam.autoflag(sigma=sigma, n_windows=n_windows))
 
-        self.metadata.history = pd.concat([self.metadata.history] + hists)
+        self.metadata.history.table = pd.concat([self.metadata.history.table, *hists])
 
-    def decimate(
-        self, bins: Union[float, int], axis: str = "frequency", use_median=False
-    ):
+    def decimate(self, bins: float | int, axis: str = "frequency", use_median=False):
         """Decimate the data in all subbands.
 
         Args:
-            bins (Union[float, int]): If int, the number of channels to bin in an average.
+            bins (float | int): If int, the number of channels to bin in an average.
                 If float, the desired width of a channel after averaging.
             axis (str, optional): Axis to decimate along. Defaults to 'frequency'.
             use_median (bool, optional): Use median instead of mean. Defaults to False.
@@ -785,9 +1005,9 @@ class SDHDF:
         for beam in tqdm(self.beams, desc="Decimating beams"):
             hists.extend(beam.decimate(bins=bins, axis=axis, use_median=use_median))
 
-        self.metadata.history = pd.concat([self.metadata.history] + hists)
+        self.metadata.history = pd.concat([self.metadata.history, *hists])
 
-    def write(self, filename: Union[str, Path], overwrite: bool = False):
+    def write(self, filename: str | Path, overwrite: bool = False):
         """Write the SDHDF object to a file.
 
         Args:
@@ -797,5 +1017,7 @@ class SDHDF:
         for beam in tqdm(self.beams, desc="Writing beams"):
             hists.extend(beam.write(filename, overwrite=overwrite))
 
-        self.metadata.history = pd.concat([self.metadata.history] + hists + [history.generate_history_row()])
+        self.metadata.history = pd.concat(
+            [self.metadata.history, *hists, history.generate_history_row()]
+        )
         self.metadata.write(filename, overwrite=overwrite)

@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-"""Read and write SDHDF tables"""
-
 from __future__ import annotations
 
 __author__ = ["Danny Price", "Alec Thomson", "Lawrence Toomey"]
@@ -63,7 +60,7 @@ class SDHDFTable:
     def _decode_df(df: pd.DataFrame) -> pd.DataFrame:
         """Decode a pandas dataframe to a string"""
         str_df = df.select_dtypes([object])
-        str_df = str_df.stack().str.decode("utf-8").unstack()
+        str_df = str_df.stack().str.decode("utf-8").unstack()  # noqa: PD010, PD013
         for col in str_df:
             df[col] = str_df[col]
         return df
@@ -79,7 +76,7 @@ class SDHDFTable:
         for key in keys:
             attr = dset_obj.attrs[key]
             if len(dset_obj[:]) == 1 and "frequency" not in dset_obj.name:
-                if key == "SDHDF_CLASS" or key == "SDHDF_DESCRIPTION":
+                if key in ("SDHDF_CLASS", "SDHDF_DESCRIPTION"):
                     value = attr[0][2].decode()
                 elif key in dset_obj.dtype.fields:
                     value = dset_obj[key][0]
@@ -87,11 +84,7 @@ class SDHDFTable:
                     value = attr[0][2].decode()
             elif len(dset_obj[:].dtype) == 0:
                 if key not in dset_obj[:]:
-                    if (
-                        key == "DIMENSION_LABELS"
-                        or key == "REFERENCE_LIST"
-                        or key == "DIMENSION_LIST"
-                    ):
+                    if key in ("DIMENSION_LABELS", "REFERENCE_LIST", "DIMENSION_LIST"):
                         value = attr
                     elif key == "CLASS":
                         value = attr.decode()
@@ -105,5 +98,4 @@ class SDHDFTable:
             key_list.append(key)
             val_list.append(value)
 
-        df = pd.DataFrame([val_list], columns=[key_list])
-        return df
+        return pd.DataFrame([val_list], columns=[key_list])

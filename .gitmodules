@@ -1,0 +1,3 @@
+[submodule "pyINSPECTA"]
+	path = pyINSPECTA
+	url = https://github.com/AlecThomson/pyINSPECTA

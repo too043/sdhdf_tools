@@ -7,6 +7,7 @@ import logging
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
+from typing import cast
 
 import dask.array as da
 import h5py
@@ -722,11 +723,11 @@ class Beam:
         **plot_kwargs,
     ):
         if isinstance(subband, int):
-            subband = self.subbands[subband]
+            sub_band = self.subbands[subband]
         elif isinstance(subband, str):
-            subband = self.__dict__[subband]
+            sub_band = cast(SubBand, self.__dict__[subband])
 
-        return subband.plot_waterfall(
+        return sub_band.plot_waterfall(
             polarization=polarization,
             flag=flag,
             **plot_kwargs,
@@ -741,11 +742,11 @@ class Beam:
         **plot_kwargs,
     ):
         if isinstance(subband, int):
-            subband = self.subbands[subband]
+            sub_band = self.subbands[subband]
         elif isinstance(subband, str):
-            subband = self.__dict__[subband]
+            sub_band = cast(SubBand, self.__dict__[subband])
 
-        return subband.plot_spectrum(
+        return sub_band.plot_spectrum(
             time=time,
             polarization=polarization,
             flag=flag,
@@ -893,10 +894,10 @@ class SDHDF:
             flag (bool, optional): Blank flagged data. Defaults to False.
         """
         if isinstance(beam, int):
-            beam = self.beams[beam]
+            beam_object = self.beams[beam]
         elif isinstance(beam, str):
-            beam = self.__dict__[beam]
-        return beam.plot_waterfall(
+            beam_object = cast(Beam, self.__dict__[beam])
+        return beam_object.plot_waterfall(
             subband=subband,
             polarization=polarization,
             flag=flag,
@@ -913,11 +914,11 @@ class SDHDF:
         **plot_kwargs,
     ):
         if isinstance(beam, int):
-            beam = self.beams[beam]
+            beam_object = self.beams[beam]
         elif isinstance(beam, str):
-            beam = self.__dict__[beam]
+            beam_object = cast(Beam, self.__dict__[beam])
 
-        return beam.plot_spectrum(
+        return beam_object.plot_spectrum(
             subband=subband,
             time=time,
             polarization=polarization,
@@ -934,11 +935,11 @@ class SDHDF:
         **plot_kwargs,
     ):
         if isinstance(beam, int):
-            beam = self.beams[beam]
+            beam_object = self.beams[beam]
         elif isinstance(beam, str):
-            beam = self.__dict__[beam]
+            beam_object = cast(Beam, self.__dict__[beam])
 
-        return beam.plot_wide(
+        return beam_object.plot_wide(
             time=time,
             polarization=polarization,
             flag=flag,

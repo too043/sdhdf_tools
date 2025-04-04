@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import warnings
-from pathlib import Path
+from importlib import resources
 
 import numpy as np
 import pandas as pd
-import pkg_resources
 from astropy.stats import mad_std, sigma_clip
 from xarray import DataArray
 
@@ -22,11 +21,13 @@ def get_persistent_rfi(telescope: str = "Parkes") -> pd.DataFrame:
     Returns:
         pd.Dataframe: Persistent RFI data.
     """
-    rfi_file = pkg_resources.resource_filename(
-        "pyINSPECTA", f"{telescope.lower()}_rfi.csv"
-    )
-    if not Path(rfi_file).exists():
-        msg = f"Persistent RFI file for {telescope} not found at '{Path(rfi_file).absolute()}'."
+    with resources.as_file(resources.files("pyINSPECTA.data.rfi")) as rfi_dir:
+        rfi_file = rfi_dir / f"{telescope.lower()}_rfi.csv"
+
+    if not rfi_file.exists():
+        msg = (
+            f"Persistent RFI file for {telescope} not found at '{rfi_file.absolute()}'."
+        )
         raise NotImplementedError(msg)
     return pd.read_csv(
         rfi_file,

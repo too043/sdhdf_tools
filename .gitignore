@@ -356,3 +356,5 @@ inspecta/src/.deps/sdhdfProc_metadata.Po
 inspecta/src/.deps/T2toolkit.Po
 inspecta/src/.deps/TKfit.Po
 python/examples/pydantic.ipynb
+
+python/pyINSPECTA/_version.py

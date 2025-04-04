@@ -1,37 +1,70 @@
-[tool.poetry]
-name = "pyINSPECTA"
-version = "0.1.0"
-description = "A collection of tools for interrogating Spectral-Domain Hierarchical Data Format (SDHDF) files"
-authors = ["Lawrence Toomey, George Hobbs, Alec Thomson"]
-readme = "README.md"
-packages = [{include = "pyINSPECTA"}]
-
-[tool.poetry.dependencies]
-python = "^3.8"
-numpy = "^1.21"
-astropy = "^5"
-h5py = "^3.7"
-pandas = "^1.4"
-xarray = "^2022"
-matplotlib = "^3.5"
-tables = "^3.7"
-tabulate = "*"
-dask = "*"
-distributed = "*"
-
-[tool.poetry.dev-dependencies]
-black = "^22"
-isort = "^5.10"
-sphinx = "^4.2"
-sphinx_mdinclude = "^0.5"
-sphinx_rtd_theme = "^1.1"
-nbconvert = "^7.2"
-sphinx-autoapi = "^2"
-
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyINSPECTA"
+dynamic = ["version"]
+description = "A collection of tools for interrogating Spectral-Domain Hierarchical Data Format (SDHDF) files"
+authors = [
+    {name="Lawrence Toomey"},
+    {name="George Hobbs"},
+    {name="Alec Thomson"},
+]
+readme = "README.md"
+license.file = "LICENSE"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "numpy >=1.21",
+    "astropy >=5",
+    "h5py >=3.7",
+    "pandas >=1.4",
+    "xarray >=2022",
+    "matplotlib >=3.5",
+    "tables >=3.7",
+    "tabulate",
+    "dask",
+    "distributed",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff >= 0.9.9",
+    "pre-commit",
+    "sphinx >=4.2",
+    "sphinx_mdinclude >=0.5",
+    "sphinx_rtd_theme >=1.1",
+    "nbconvert >=7.2",
+    "sphinx-autoapi >=2",
+]
+
+[tool.hatch]
+version.source = "vcs"
+build.hooks.vcs.version-file = "pyINSPECTA/_version.py"
+
+[project.urls]
+Homepage = "https://bitbucket.csiro.au/projects/CPDA/repos/sdhdf_tools/browse"
+"Bug Tracker" = "https://jira.csiro.au/projects/CPDA/"
 
 [tool.ruff]
 extend-exclude = ["examples/*.py", "docs/conf.py"]

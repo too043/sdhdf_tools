@@ -80,8 +80,7 @@ Compatible with data written in SDHDF <=v3.0
 
 ## Test data
 
-Accompanying this repository is the sdhdf\_test\_data repository:
-* https://bitbucket.csiro.au/scm/cpda/sdhdf\_test\_data.git
+Please contact lawrence.toomey@csiro.au if you would like access to some tests data.
 
 
 ## More information

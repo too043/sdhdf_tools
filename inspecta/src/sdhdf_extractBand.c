@@ -48,6 +48,7 @@ void help()
   printf("\nExample:\n\n");
   printf("sdhdf_extractBand -e eB -b 5 file.hdf\n\n");
 
+  printf("Note that the zoom band selection does not take into account the sub-band selection (and can go accross multiple bands)\n");
   exit(1);
 }
 
@@ -62,7 +63,8 @@ int main(int argc,char *argv[])
   sdhdf_fileStruct *inFile,*outFile;
   herr_t status;
   char selectBand[MAX_BANDS][MAX_STRLEN];
-  float *outVals,*freqVals,*inData;
+  float *outVals,*inData;
+  double *freqVals;
   sdhdf_obsParamsStruct  *outObsParams;
   int  nSelectBands=0;
   int  copyBand=0;
@@ -311,7 +313,7 @@ int main(int argc,char *argv[])
 		      outBandParams[j].nchan = totNchan;
 		      outBandParams[j].dtime = inBandParams[selectBandID].dtime;
 		      outVals  = (float *)malloc(sizeof(float)*outBandParams[j].nchan*4*outBandParams[j].ndump); // Fix 4 = npol, 1 = ndump
-		      freqVals = (float *)malloc(sizeof(float)*outBandParams[j].nchan); 
+		      freqVals = (double *)malloc(sizeof(double)*outBandParams[j].nchan); 
 		      printf("Total nchan = %d\n",totNchan);
 		      
 		      printf("Using original channel %d for number of spectral dumps, calibration solution etc.\n",selectBandID);
@@ -357,12 +359,24 @@ int main(int argc,char *argv[])
 		      printf("Output nchan = %d (%d), npol = %d\n",nchan,totNchan,npol);
 		      //		      sdhdf_writeSpectrumData(outFile,inFile,b,j,outVals,freqVals,nchan,4,1,0); // FIX 4,1,0
 
-		      // FIX ME: Only sending 1 frequency channel through
 		      sdhdf_writeSpectrumData(outFile,inFile->beamHeader[b].label,outBandParams[j].label,b,j,outVals,freqVals,1,totNchan,1,npol,outBandParams[j].ndump,0,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
 		      sdhdf_writeObsParams(outFile,outBandParams[j].label,inFile->beamHeader[b].label,j,outObsParams,outBandParams[j].ndump,1,inFile->primary[0].hdr_defn_version);
-		    
-		      sprintf(groupName1,"beam_%d/%s/metadata/cal_obs_params",b,inFile->beam[b].bandHeader[selectBandID].label);
-		      sprintf(groupName2,"beam_%d/%s/metadata/cal_obs_params",b,outBandParams[j].label);
+		      if (strcmp(inFile->primary[0].hdr_defn_version,"4.0")==0)       
+			{
+			  char beamLabel[128];
+			  strcpy(beamLabel,inFile->beamHeader[b].label);
+			  sprintf(groupName1,"%s/%s/metadata/calibrator_observation_parameters",beamLabel,inFile->beam[b].bandHeader[selectBandID].label);
+			  sprintf(groupName2,"%s/%s/metadata/calibrator_observation_parameters",beamLabel,outBandParams[j].label);
+			  printf("Calibrator_observation_parameters: %s %s\n",groupName1,groupName2);
+			}
+		      else
+			{
+			  char beamLabel[128];
+			  strcpy(beamLabel,inFile->beamHeader[b].label);
+
+			  sprintf(groupName1,"%s/%s/metadata/cal_obs_params",beamLabel,inFile->beam[b].bandHeader[selectBandID].label);
+			  sprintf(groupName2,"%s/%s/metadata/cal_obs_params",beamLabel,outBandParams[j].label);
+			}
 		      sdhdf_copyEntireGroupDifferentLabels(groupName1,inFile,groupName2,outFile);
 		      //    sdhdf_writeObsParams(outFile,outBandParams[j].label,b,j,outCalObsParams,outCalBandParams[j].ndump,2); 
 

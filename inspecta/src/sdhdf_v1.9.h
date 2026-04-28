@@ -104,7 +104,7 @@ typedef struct sdhdf_spectralDumpsStruct {
   int    pol3AllocatedMemory;      // 0 = no, otherwise 1
   int    pol4AllocatedMemory;      // 0 = no, otherwise 1
   
-  float  *freq;                // Frequency (frequency axis per spectral dump)
+  double  *freq;               // Frequency (frequency axis per spectral dump)
   int    nFreqDumps;           // Number of frequency dumps 
   float  *dataWeights;         // Weight information for channels and spectral dumps
   unsigned char *flag;                // Flagging information only for channels
@@ -279,6 +279,7 @@ typedef struct sdhdf_obsParamsStruct {
   double dtime;
   char timedb[64];
   double mjd;
+  double fractional_mjd;
   char utc[64];
   char ut_date[64];
   char local_time[64];

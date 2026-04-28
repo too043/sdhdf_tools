@@ -54,7 +54,7 @@ void help()
   exit(1);
 }
 
-void determineOffSourceScale(float *freqOffScl,float *offSclA,float *offSclB,int n,float freq,float *sclA2,float *sclB2);
+void determineOffSourceScale(float *freqOffScl,float *offSclA,float *offSclB,int n,double freq,float *sclA2,float *sclB2);
 
 int main(int argc,char *argv[])
 {
@@ -79,7 +79,7 @@ int main(int argc,char *argv[])
   float on_pol2,off_pol2;
   float on_pol3,off_pol3;
   float on_pol4,off_pol4;
-  float *freq;
+  double *freq;
   long nchan,npol,ndump;
   float sclA=1.0;
   float sclB=1.0;
@@ -227,7 +227,7 @@ int main(int argc,char *argv[])
 	      npol  = onFile->beam[b].bandHeader[i].npol;
 	      ndump = 1; //onFile->beam[b].bandHeader[i].ndump;
 	      out_data = (float *)malloc(sizeof(float)*nchan*npol*ndump);
-	      freq = (float *)malloc(sizeof(float)*nchan);      
+	      freq = (double *)malloc(sizeof(double)*nchan);      
 	      sdhdf_loadBandData(onFile,b,i,1);
 	      sdhdf_loadBandData(offFile,b,i,1);
 	      /* FIX ME
@@ -371,7 +371,7 @@ int main(int argc,char *argv[])
 
 }
 
-void determineOffSourceScale(float *freqOffScl,float *offSclA,float *offSclB,int n,float freq,float *sclA2,float *sclB2)
+void determineOffSourceScale(float *freqOffScl,float *offSclA,float *offSclB,int n,double freq,float *sclA2,float *sclB2)
 {
   int i;
 

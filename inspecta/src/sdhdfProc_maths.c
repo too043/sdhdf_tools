@@ -175,7 +175,7 @@ Modified:  Dave Hale, Colorado School of Mines, 08/04/91
   yd[n-1][3] = yd[n-2][3];
 }
 
-float sdhdf_splineValue(float x,int n,float *xSpline,float **yd)
+float sdhdf_splineValue(double x,int n,float *xSpline,float **yd)
 {
   float val;
   float h;

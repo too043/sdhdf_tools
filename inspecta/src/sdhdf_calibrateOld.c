@@ -61,7 +61,8 @@ int main(int argc,char *argv[])
   float pol1,pol2,pol3,pol4;
   int tcal = 0;  // Scal if tcal = 0.
   
-  float *out_data,*out_freq;
+  float *out_data;
+  double *out_freq;
 
   sdhdf_fileStruct *inFile,*outFile;
   sdhdf_calibration *polCal;
@@ -224,7 +225,7 @@ int main(int argc,char *argv[])
 		  for (kk=0;kk<ndump;kk++)
 		    sdhdf_copySingleObsParams(inFile,b,j,kk,&outObsParams[kk]);
 		  
-		  out_freq  = (float *)malloc(sizeof(float)*nchan*nchanFreq);
+		  out_freq  = (double *)malloc(sizeof(double)*nchan*nchanFreq);
 		  out_data  = (float *)calloc(sizeof(float),nchan*npol*ndump);
 		  dataWts   = (float *)calloc(sizeof(float),nchan*ndump);
 

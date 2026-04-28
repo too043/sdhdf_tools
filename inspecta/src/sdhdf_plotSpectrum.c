@@ -304,9 +304,9 @@ void plotSpectrum(sdhdf_fileStruct *inFile,int ibeam,int iband,int idump,double 
 	      if (xplot==1)
 		{
 		  if (fref < 0)
-		    freq[i] = inFile->beam[ibeam].bandData[iband].astro_data.freq[idump*nchan+i];
+		    freq[i] = (float)inFile->beam[ibeam].bandData[iband].astro_data.freq[idump*nchan+i];
 		  else
-		    freq[i] = (1.0-inFile->beam[ibeam].bandData[iband].astro_data.freq[idump*nchan+i]/(fref))*SPEED_LIGHT/1000.; // km/s
+		    freq[i] = (float)(1.0-inFile->beam[ibeam].bandData[iband].astro_data.freq[idump*nchan+i]/(fref))*SPEED_LIGHT/1000.; // km/s
 		}
 	      else
 		freq[i] = i;

@@ -96,6 +96,8 @@ int main(int argc,char *argv[])
   float  *infloatVals;
   float  *freqVals;
   float  *freqCalVals;
+  double  *dfreqVals;
+  double  *dfreqCalVals;
   float *datOffs;
   float *datScl;
   double *doubleVals;
@@ -211,6 +213,7 @@ int main(int argc,char *argv[])
       infloatVals = (float *)malloc(sizeof(float)*nchan*npol*nBeam);
       floatVals   = (float *)malloc(sizeof(float)*nchan*npol*ndump*nBeam);
       freqVals    = (float *)malloc(sizeof(float)*nchan);
+      dfreqVals    = (double *)malloc(sizeof(double)*nchan);
 
 
       for (i=0;i<nBeam;i++)
@@ -311,6 +314,7 @@ int main(int argc,char *argv[])
 	  floatCalValsOn  = (float *)malloc(sizeof(float)*nchan_cal*npol_cal*ndump_cal);
 	  floatCalValsOff = (float *)malloc(sizeof(float)*nchan_cal*npol_cal*ndump_cal);
 	  freqCalVals    = (float *)malloc(sizeof(float)*nchan_cal);
+	  dfreqCalVals    = (double *)malloc(sizeof(double)*nchan_cal);
 	  shortVals   = (short int *)malloc(sizeof(short int)*nchan_cal*npol_cal*nbin_cal);
 	  
 	  fits_get_colnum(fptr,CASEINSEN,"DAT_OFFS",&colnum_datoffs,&status);
@@ -344,6 +348,7 @@ int main(int argc,char *argv[])
 	      calObsParams[i].timeElapsed = i; // FIX
 	      strcpy(calObsParams[i].timedb,"UNKNOWN"); // FIX
 	      calObsParams[i].mjd = 56000; // FIX
+	      calObsParams[i].fractional_mjd = 0; // FIX
 	      strcpy(calObsParams[i].utc,"UNKNOWN"); // FIX
 	      strcpy(calObsParams[i].ut_date,"UNKNOWN"); // FIX
 	      strcpy(calObsParams[i].local_time,"UNKNOWN"); // FIX 
@@ -426,6 +431,7 @@ int main(int argc,char *argv[])
       infloatVals = (float *)malloc(sizeof(float)*nchan*npol); // DON'T NEED THIS ONE .. BUT FREE AT THE END .. FIX ME
       floatVals   = (float *)malloc(sizeof(float)*nchan*npol*ndump*nbin);
       freqVals    = (float *)malloc(sizeof(float)*nchan);
+      dfreqVals    = (double *)malloc(sizeof(double)*nchan);
       shortVals   = (short int *)malloc(sizeof(short int)*nchan*npol*nbin);
       baseline1   = (double *)malloc(sizeof(double)*nchan);
       baseline2   = (double *)malloc(sizeof(double)*nchan);
@@ -515,6 +521,7 @@ int main(int argc,char *argv[])
       obsParams[i].timeElapsed = i; // FIX
       strcpy(obsParams[i].timedb,"UNKNOWN"); // FIX
       obsParams[i].mjd = 56000; // FIX
+      obsParams[i].fractional_mjd = 0; // FIX
       strcpy(obsParams[i].utc,"UNKNOWN"); // FIX
       strcpy(obsParams[i].ut_date,"UNKNOWN"); // FIX
       strcpy(obsParams[i].local_time,"UNKNOWN"); // FIX
@@ -577,7 +584,9 @@ int main(int argc,char *argv[])
       sdhdf_writeObsParams(outFile,bandHeader[0].label,beamHeader[b].label,0,obsParams,ndump,1,(char *)"4.0");
       // FIX ME: Only sending 1 frequency channel through
       printf("Number of bins = %d\n",nbin);
-      sdhdf_writeSpectrumData(outFile,beamHeader[b].label,bandHeader->label,b,0,floatVals+b*nchan*npol*ndump,freqVals,1,nchan,nbin,npol,ndump,1,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
+      for (i=0;i<nchan;i++)
+	dfreqVals[i] = (double)freqVals[i];
+      sdhdf_writeSpectrumData(outFile,beamHeader[b].label,bandHeader->label,b,0,floatVals+b*nchan*npol*ndump,dfreqVals,1,nchan,nbin,npol,ndump,1,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
       if (cal==1)
 	{
 	  sdhdf_writeBandHeader(outFile,calBandHeader,beamHeader[b].label,1,2,(char *)"4.0");
@@ -588,8 +597,12 @@ int main(int argc,char *argv[])
 	  // 
 	  
 	  // FIX ME: Only sending 1 frequency channel through
-	  sdhdf_writeSpectrumData(outFile,beamHeader[b].label,bandHeader->label,b,0,floatCalValsOn,freqCalVals,1,nchan_cal,1,npol_cal,ndump_cal,2,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
-	  sdhdf_writeSpectrumData(outFile,beamHeader[b].label,bandHeader->label,0,0,floatCalValsOff,freqCalVals,1,nchan_cal,1,npol_cal,ndump_cal,3,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
+	  for (i=0;i<nchan_cal;i++)
+	    {
+	      dfreqCalVals[i] = (double)freqCalVals[i];
+	    }
+	  sdhdf_writeSpectrumData(outFile,beamHeader[b].label,bandHeader->label,b,0,floatCalValsOn,dfreqCalVals,1,nchan_cal,1,npol_cal,ndump_cal,2,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
+	  sdhdf_writeSpectrumData(outFile,beamHeader[b].label,bandHeader->label,0,0,floatCalValsOff,dfreqCalVals,1,nchan_cal,1,npol_cal,ndump_cal,3,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
 	  printf("Completed writing cal\n");      
 	}
     }
@@ -604,6 +617,7 @@ int main(int argc,char *argv[])
       free(floatCalValsOn);
       free(floatCalValsOff);
       free(freqCalVals);
+      free(dfreqCalVals);
       free(calBandHeader);
       free(calObsParams);	    
     }
@@ -621,5 +635,6 @@ int main(int argc,char *argv[])
   free(floatVals);
   free(infloatVals);
   free(freqVals);
+  free(dfreqVals);
   free(doubleVals);
 } 

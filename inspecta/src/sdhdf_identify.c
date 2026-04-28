@@ -240,7 +240,7 @@ int main(int argc,char *argv[])
 	      strcpy(info[nEntry].source,inFile->beamHeader[ibeam].source);
 	      info[nEntry].ra = inFile->beam[ibeam].bandData[iband].astro_obsHeader[0].raDeg; // Note 0 here
 	      info[nEntry].dec = inFile->beam[ibeam].bandData[iband].astro_obsHeader[0].decDeg;
-	      info[nEntry].mjd = inFile->beam[ibeam].bandData[iband].astro_obsHeader[0].mjd;
+	      info[nEntry].mjd = inFile->beam[ibeam].bandData[iband].astro_obsHeader[0].mjd + inFile->beam[ibeam].bandData[iband].astro_obsHeader[0].fractional_mjd;
 	      info[nEntry].nband = inFile->beam[ibeam].nBand;
 	      info[nEntry].sb = iband;
 	      strcpy(info[nEntry].projid,inFile->primary[0].pid);
@@ -262,7 +262,7 @@ int main(int argc,char *argv[])
 		  strcpy(info[nEntry].source,inFile->beamHeader[ibeam].source);
 		  info[nEntry].ra = inFile->beam[ibeam].bandData[j].astro_obsHeader[0].raDeg; // Note 0 here
 		  info[nEntry].dec = inFile->beam[ibeam].bandData[j].astro_obsHeader[0].decDeg;
-		  info[nEntry].mjd = inFile->beam[ibeam].bandData[j].astro_obsHeader[0].mjd;
+		  info[nEntry].mjd = inFile->beam[ibeam].bandData[j].astro_obsHeader[0].mjd + inFile->beam[ibeam].bandData[j].astro_obsHeader[0].fractional_mjd;
 		  info[nEntry].nband = inFile->beam[ibeam].nBand;
 		  info[nEntry].sb = j;
 		  strcpy(info[nEntry].projid,inFile->primary[0].pid);

@@ -1165,7 +1165,7 @@ void zapPersistent(sdhdf_fileStruct *inFile,int ibeam,int zapAll)
     {
       if (rfi[i].type == 1) 
 	{
-	  mjd = inFile->beam[ibeam].bandData[0].astro_obsHeader[0].mjd; // FIX 0 FOR BAND AND DUMP HERE
+	  mjd = inFile->beam[ibeam].bandData[0].astro_obsHeader[0].mjd + inFile->beam[ibeam].bandData[0].astro_obsHeader[0].fractional_mjd; // FIX 0 FOR BAND AND DUMP HERE
 	  if (mjd >= rfi[i].mjd0 && mjd <= rfi[i].mjd1)
 	    {
 	      f0[n] = rfi[i].f0;

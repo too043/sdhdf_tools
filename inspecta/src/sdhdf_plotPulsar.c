@@ -62,7 +62,7 @@ int main(int argc,char *argv[])
   float dm=306.9;                // FIX ME
   float period=0.88776601200758; // FIX ME
   float binOffset;
-  float *freqVals;
+  double *freqVals;
   float heat_l[] = {0.0, 0.2, 0.4, 0.6, 1.0};
   float heat_r[] = {0.0, 0.5, 1.0, 1.0, 1.0};
   //  float heat_g[] = {0.0, 0.0, 0.5, 1.0, 1.0};
@@ -108,7 +108,7 @@ int main(int argc,char *argv[])
   
   allData = (float *)malloc(sizeof(float)*nbin*nchan*npol*ndump);
   freqPhase = (float *)malloc(sizeof(float)*nbin*nchan);
-  freqVals = (float *)malloc(sizeof(float)*nchan);
+  freqVals = (double *)malloc(sizeof(double)*nchan);
   timePhase = (float *)malloc(sizeof(float)*nbin*ndump);
   plotProfile1 = (float *)malloc(sizeof(float)*nchan);
   sdhdf_loadBandData2Array(inFile,ibeam,iband,1,allData);

@@ -67,7 +67,8 @@ int main(int argc,char *argv[])
   sdhdf_fileStruct *inFile,*outFile;
   herr_t status;
   int selectDump[MAX_BANDS];
-  float *outVals,*freqVals,*inData;
+  float *outVals,*inData;
+  double *freqVals;
   int  nSelectDumps=0;
   int  copySD=0;
   float fSelect0[MAX_BANDS];
@@ -85,7 +86,8 @@ int main(int argc,char *argv[])
   int selectBeam=-1;
   
   long npol,ndump,out_ndump,out_ndump_num;
-  float *out_data,*out_freq;
+  float *out_data;
+  double *out_freq;
   
   strcpy(oname,"sdhdf_extract_output.hdf");
   
@@ -163,7 +165,7 @@ int main(int argc,char *argv[])
 		      
 		      out_data = (float *)malloc(sizeof(float)*nchan*npol*out_ndump);
 		      // Should use nFreqDumps here -- FIX ME
-		      out_freq = (float *)malloc(sizeof(float)*nchan);
+		      out_freq = (double *)malloc(sizeof(double)*nchan);
 		      
 		      sdhdf_loadBandData(inFile,b,i,1);
 		      for (j=0;j<nchan;j++)

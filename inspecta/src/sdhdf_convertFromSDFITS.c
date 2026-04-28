@@ -412,6 +412,7 @@ int main(int argc,char *argv[])
 	  sscanf(dte[i*nbeam+b],"%d-%d-%d",&iy,&im,&id);
 	  slaCaldj (iy, im, id, &mjd0, &ret);
 	  obsParams[i].mjd = mjd0 + timeVals[i*nbeam+b]/86400.; 
+	  obsParams[i].fractional_mjd = 0; // FIX ME
 	  hr = (int)(timeVals[i*nbeam+b]/60./60.);
 	  min = (int)((timeVals[i*nbeam+b]-hr*60*60.)/60.);
 	  sec = timeVals[i*nbeam+b] - hr*60*60. - min*60;

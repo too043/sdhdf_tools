@@ -52,9 +52,10 @@ void help()
   printf("-freqRange <f0> <f1>   Output data between f0 and f1 (in MHz)\n");
   printf("-mjd                   Print dump time MJD in output\n");
   printf("-noflagged             Do not print out lines that have been flagged\n");
+  printf("-position              Output pointing position\n");
   printf("-stokes                Convert coherency products to Stokes (for calibrated data) or pseudo-Stokes (uncalibrated data)\n");
   printf("-tsys                  output system temperature measurements\n");
-
+  
   printf("\nExample:\n\n");
   printf("sdhdf_quickdump file.hdf\n\n");
 
@@ -67,11 +68,12 @@ int main(int argc,char *argv[])
 {
   int i,j,k,beam,band;
   int mjd=0;
+  int pointingPosition=0;
   int display=0;
   int notFlagged=0;
   int nFiles=0;
   char fname[MAX_FILES][MAX_STRLEN];
-  float freq;
+  double freq;
   int   flag;
   float weight;
   float pol1,pol2,pol3,pol4;
@@ -83,10 +85,11 @@ int main(int argc,char *argv[])
   char extFileName[MAX_STRLEN];
   char outFileName[MAX_STRLEN];
   FILE *fout;
-  float freq0,freq1;
+  double freq0,freq1;
   int   setFreqRange=0;
   int sd0,sd1;
   int   setDumpRange=0;
+  int setBandRange=0;
   int nchan;
   int dataType=1;
   int calOnOff = 0;
@@ -105,6 +108,8 @@ int main(int argc,char *argv[])
 	help();
       else if (strcmp(argv[i],"-mjd")==0)
 	mjd=1;
+      else if (strcmp(argv[i],"-position")==0)
+	pointingPosition=1;
       else if (strcasecmp(argv[i],"-notFlagged")==0)
 	notFlagged=1;
       else if (strcmp(argv[i],"-stokes")==0)
@@ -127,8 +132,8 @@ int main(int argc,char *argv[])
 	cal32_tav=1;
       else if (strcmp(argv[i],"-freqRange")==0)
 	{
-	  sscanf(argv[++i],"%f",&freq0);
-	  sscanf(argv[++i],"%f",&freq1);
+	  sscanf(argv[++i],"%lf",&freq0);
+	  sscanf(argv[++i],"%lf",&freq1);
 	  setFreqRange=1;
 	}
       else if (strcmp(argv[i],"-dumpRange")==0)
@@ -141,7 +146,7 @@ int main(int argc,char *argv[])
 	{
 	  sscanf(argv[++i],"%d",&band0);
 	  sscanf(argv[++i],"%d",&band1);
-	  setDumpRange=1;
+	  setBandRange=1;
 	}
       else if (strcmp(argv[i],"-e")==0)
 	{
@@ -256,15 +261,23 @@ int main(int argc,char *argv[])
 				  if (outFile==1)
 				    {
 				      if (fref < 0)
-					fprintf(fout,"%s %d %d %d %d %.6f %g %g %g %g %g\n",inFile->fname,beam,band,k,j,freq,pol1,pol2,pol3,pol4,weight);
+					fprintf(fout,"%s %d %d %d %d %.7f %g %g %g %g %g\n",inFile->fname,beam,band,k,j,freq,pol1,pol2,pol3,pol4,weight);
 				      else
-					fprintf(fout,"%s %d %d %d %d %.6f %g %g %g %g %g %.6g\n",inFile->fname,beam,band,k,j,freq,pol1,pol2,pol3,pol4,weight,(1.0-freq/fref)*SPEED_LIGHT/1000.); // km/s);
+					fprintf(fout,"%s %d %d %d %d %.7f %g %g %g %g %g %.6g\n",inFile->fname,beam,band,k,j,freq,pol1,pol2,pol3,pol4,weight,(1.0-freq/fref)*SPEED_LIGHT/1000.); // km/s);
 				    }
 				  else
 				    {
 				      if (fref < 0)
-					printf("%s %d %d %d %d %.6f %g %g %g %g %g %.6f\n",inFile->fname,beam,band,k,j,freq,pol1,pol2,pol3,pol4,weight,
-					       inFile->beam[beam].bandData[0].astro_obsHeader[k].mjd);
+					{
+					  if (pointingPosition==0)
+					    printf("%s %d %d %d %d %.7f %g %g %g %g %g %.6f\n",inFile->fname,beam,band,k,j,freq,pol1,pol2,pol3,pol4,weight,
+						   inFile->beam[beam].bandData[0].astro_obsHeader[k].mjd+inFile->beam[beam].bandData[0].astro_obsHeader[k].fractional_mjd);
+					  else
+					    printf("%s %d %d %d %d %.7f %g %g %g %g %g %.6f %.6f %.6f\n",inFile->fname,beam,band,k,j,freq,pol1,pol2,pol3,pol4,weight,
+						   inFile->beam[beam].bandData[0].astro_obsHeader[k].mjd+inFile->beam[beam].bandData[0].astro_obsHeader[k].fractional_mjd,inFile->beam[beam].bandData[band].astro_obsHeader[k].raDeg,
+						   inFile->beam[beam].bandData[band].astro_obsHeader[k].decDeg);
+					    
+					}
 				      else
 					printf("%s %d %d %d %d %.6f %g %g %g %g %g %.6f\n",inFile->fname,beam,band,k,j,freq,pol1,pol2,pol3,pol4,weight,(1.0-freq/fref)*SPEED_LIGHT/1000.); // km/s);
 				    }
@@ -342,7 +355,7 @@ int main(int argc,char *argv[])
 
 				      cal_on_pol4+=inFile->beam[beam].bandData[band].cal_on_data.pol4[k+j*nchanCal];
 				      cal_off_pol4+=inFile->beam[beam].bandData[band].cal_off_data.pol4[k+j*nchanCal];
-				      mjdAv += inFile->beam[beam].bandData[band].cal_obsHeader[j].mjd;
+				      mjdAv += (inFile->beam[beam].bandData[band].cal_obsHeader[j].mjd + inFile->beam[beam].bandData[band].cal_obsHeader[j].fractional_mjd);
 				      nd++;
 				    }
 				  cal_on_pol1/=(double)nd;  cal_off_pol1/=(double)nd;
@@ -379,7 +392,7 @@ int main(int argc,char *argv[])
 				  if (setFreqRange==1 && (freq < freq0 || freq > freq1))
 				    display=0;
 				  if (display==1)
-				    printf("%s %d %d %d %d %.6f %g %g %g %g %g %g %g %g %.6f %.6f %.6f %.6f %s\n",inFile->fname,beam,band,k,j,freq,inFile->beam[beam].bandData[band].cal_on_data.pol1[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_off_data.pol1[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_on_data.pol2[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_off_data.pol2[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_on_data.pol3[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_off_data.pol3[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_on_data.pol4[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_off_data.pol4[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_obsHeader[j].mjd,inFile->beam[beam].bandData[band].cal_obsHeader[j].az,inFile->beam[beam].bandData[band].cal_obsHeader[j].el,inFile->beam[beam].bandData[band].cal_obsHeader[j].paraAngle,inFile->beamHeader[beam].source);
+				    printf("%s %d %d %d %d %.6f %g %g %g %g %g %g %g %g %.6f %.6f %.6f %.6f %s\n",inFile->fname,beam,band,k,j,freq,inFile->beam[beam].bandData[band].cal_on_data.pol1[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_off_data.pol1[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_on_data.pol2[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_off_data.pol2[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_on_data.pol3[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_off_data.pol3[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_on_data.pol4[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_off_data.pol4[k+j*nchanCal],inFile->beam[beam].bandData[band].cal_obsHeader[j].mjd+inFile->beam[beam].bandData[band].cal_obsHeader[j].fractional_mjd,inFile->beam[beam].bandData[band].cal_obsHeader[j].az,inFile->beam[beam].bandData[band].cal_obsHeader[j].el,inFile->beam[beam].bandData[band].cal_obsHeader[j].paraAngle,inFile->beamHeader[beam].source);
 				  
 				}
 			    }

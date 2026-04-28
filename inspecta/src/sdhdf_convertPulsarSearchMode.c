@@ -84,6 +84,7 @@ int main(int argc,char *argv[])
   double chan_bw;
   unsigned char *storeVals;
   float  *freqVals;
+  double  *dfreqVals;
   float *datOffs;
   float *datScl;
 
@@ -172,6 +173,7 @@ int main(int argc,char *argv[])
       exit(1);      
     }
   freqVals = (float *)malloc(sizeof(float)*nchan);
+  dfreqVals = (double *)malloc(sizeof(double)*nchan);
   printf("Got here\n");
   printf("colnum_datoffs = %d\n",colnum_datoffs);
   fits_get_colnum(fptr,CASEINSEN,"DAT_FREQ",&colnum,&status);
@@ -199,6 +201,8 @@ int main(int argc,char *argv[])
       obsParams[i].timeElapsed = i; // FIX
       strcpy(obsParams[i].timedb,"UNKNOWN"); // FIX
       obsParams[i].mjd = 56000; // FIX
+      obsParams[i].fractional_mjd = 0; // FIX
+
       strcpy(obsParams[i].utc,"UNKNOWN"); // FIX
       strcpy(obsParams[i].ut_date,"UNKNOWN"); // FIX
       strcpy(obsParams[i].local_time,"UNKNOWN"); // FIX
@@ -261,7 +265,9 @@ int main(int argc,char *argv[])
       sdhdf_writeObsParams(outFile,bandHeader[0].label,beamHeader[b].label,0,obsParams,ndump,1,(char *)"4.0");
       // FIX ME: Only sending 1 frequency channel through
       printf("Writing data\n");
-      sdhdf_writeQuantisedSpectrumData(outFile,beamHeader[b].label,bandHeader->label,b,0,storeVals,freqVals,1,nchan,nsblk*ndump/samplesperbyte,npol,1,1,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
+      for (i=0;i<nchan;i++)
+	dfreqVals[i]=(double)freqVals[i];
+      sdhdf_writeQuantisedSpectrumData(outFile,beamHeader[b].label,bandHeader->label,b,0,storeVals,dfreqVals,1,nchan,nsblk*ndump/samplesperbyte,npol,1,1,dataAttributes,nDataAttributes,freqAttributes,nFreqAttributes);
       printf("Finished writing data\n");
     }
   sdhdf_writeSoftwareVersions(outFile,softwareVersions);
@@ -279,4 +285,5 @@ int main(int argc,char *argv[])
   free(softwareVersions);
   free(history);
   free(freqVals);
+  free(dfreqVals);
 } 

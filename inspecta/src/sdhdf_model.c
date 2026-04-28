@@ -27,6 +27,7 @@
 // Data modelling structure
 typedef struct dataModelStruct {
   char bandLabel[MAX_STRLEN];
+  char beamLabel[MAX_STRLEN];
   int original_nsub;
   int original_nchan;
   int original_npol;
@@ -141,6 +142,7 @@ int main(int argc,char *argv[])
       nsub  = inFile->beam[ibeam].bandHeader[i].ndump;
       npol  = inFile->beam[ibeam].bandHeader[i].npol;
       strcpy(model[i].bandLabel,inFile->beam[ibeam].bandHeader[i].label);
+      strcpy(model[i].beamLabel,inFile->beamHeader[ibeam].label);
       model[i].original_nsub  = nsub;
       model[i].original_nchan = nchan;
       model[i].original_npol  = npol;
@@ -286,6 +288,7 @@ void modelSpectrum(dataModelStruct *model,int nband,sdhdf_fileStruct *outFile,in
 	  {
 	    model[i].subtract[j] = model[i].originalData[j] - model[i].model[j];
 	    model[i].subtract[j+model[i].original_nchan] = model[i].originalData[j+model[i].original_nchan] - model[i].model[j+model[i].original_nchan];
+	    printf("subtract: %d %g %g\n",j, model[i].subtract[j], model[i].subtract[j+model[i].original_nchan]);
 	  }
       }
     for (j=0;j<model[iband].original_nchan;j++)
@@ -669,8 +672,8 @@ void writeModel(sdhdf_fileStruct *outFile,dataModelStruct *model,int nband,int s
       npol  = model[i].original_npol;
 
       if (subtract==1)
-	sdhdf_replaceSpectrumData(outFile,model[i].bandLabel,b,i,model[i].subtract,nsub,npol,nchan);
+	sdhdf_replaceSpectrumData(outFile,model[i].bandLabel,model[i].beamLabel,i,model[i].subtract,nsub,npol,nchan);
       else
-	sdhdf_replaceSpectrumData(outFile,model[i].bandLabel,b,i,model[i].model,nsub,npol,nchan);
+	sdhdf_replaceSpectrumData(outFile,model[i].bandLabel,model[i].beamLabel,i,model[i].model,nsub,npol,nchan);
     }
 }

@@ -148,7 +148,8 @@ int main(int argc,char *argv[])
   int nFreqAttributes=0;
   sdhdf_attributes_struct *freqAttributes;
   sdhdf_attributes_struct *dataAttributes;
-  float *freq,*data;
+  double *freq;
+  float *data;
   float ssys_aa = 22;
   float ssys_bb = 23;
   float *tsky_gl;
@@ -403,7 +404,7 @@ int main(int argc,char *argv[])
 	  spectrumAdd = (float *)malloc(sizeof(float)*nchan);
 	  addUserSpectrum=0;
 	  obsParams = (sdhdf_obsParamsStruct *)malloc(sizeof(sdhdf_obsParamsStruct)*ndump);
-	  freq = (float *)malloc(sizeof(float)*nchan);
+	  freq = (double *)malloc(sizeof(double)*nchan);
 	  data = (float *)malloc(sizeof(float)*nchan*ndump*npol);
 	  strcpy(bandHeader[j].label,params->band[j].label);
 
@@ -433,6 +434,7 @@ int main(int argc,char *argv[])
 	      obsParams[k].timeElapsed = params->dump[k].timeFromStart;
 	      strcpy(obsParams[k].timedb,"unknown");
 	      obsParams[k].mjd = params->dump[k].mjd;
+	      obsParams[k].fractional_mjd = 0;
 	      strcpy(obsParams[k].utc,"unknown");
 	      strcpy(obsParams[k].ut_date,"unknown");
 	      strcpy(obsParams[k].local_time,"unknown");

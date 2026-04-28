@@ -66,7 +66,7 @@ int main(int argc,char *argv[])
   int i0;
   float dt;
   float f0,df;
-  float *freqVals;
+  double *freqVals;
   float heat_l[] = {0.0, 0.2, 0.4, 0.6, 1.0};
   float heat_r[] = {0.0, 0.5, 1.0, 1.0, 1.0};
   //  float heat_g[] = {0.0, 0.0, 0.5, 1.0, 1.0};
@@ -110,7 +110,7 @@ int main(int argc,char *argv[])
   printf("nsamples = %d, nchan = %d ndump = %d\n",nsamples,nchan,ndump);
   loadData = (unsigned char *)malloc(sizeof(unsigned)*nsamples*nchan*npol/samplesperbyte);
   plotData = (float *)malloc(sizeof(float)*nsamplesPlot*nchan*npol);
-  freqVals = (float *)malloc(sizeof(float)*nchan);
+  freqVals = (double *)malloc(sizeof(double)*nchan);
   printf("Loading freq\n");
   sdhdf_loadFrequency2Array(inFile,ibeam,iband,freqVals,&nFreqDump);
   f0 = freqVals[0]; df = freqVals[1]-freqVals[0];

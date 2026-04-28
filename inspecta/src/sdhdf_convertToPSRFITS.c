@@ -713,7 +713,7 @@ void createPrimaryHeader(fitsfile *cal,fitsfile *psr,  sdhdf_fileStruct *inFile)
 
   iint = (int)(inFile->beam[0].bandData[0].astro_obsHeader[0].mjd);
   fits_update_key(cal,TINT,"STT_IMJD",&iint,NULL,&status);  fits_update_key(psr,TINT,"STT_IMJD",&iint,NULL,&status);
-  ifloat = (inFile->beam[0].bandData[0].astro_obsHeader[0].mjd - iint)*86400.0;
+  ifloat = (inFile->beam[0].bandData[0].astro_obsHeader[0].fractional_mjd)*86400.0;
   fits_update_key(cal,TFLOAT,"STT_SMJD",&ifloat,NULL,&status);  fits_update_key(psr,TFLOAT,"STT_SMJD",&ifloat,NULL,&status);
   ifloat = 0.0;
   fits_update_key(cal,TFLOAT,"STT_OFFS",&ifloat,NULL,&status);  fits_update_key(psr,TFLOAT,"STT_OFFS",&ifloat,NULL,&status);

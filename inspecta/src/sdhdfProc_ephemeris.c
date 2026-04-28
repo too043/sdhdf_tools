@@ -174,7 +174,7 @@ void sdhdf_calcVoverC(double *mjd,double *raDeg,double *decDeg,int nvals,double 
 		}
 	    }
 	  fclose(fin);
-	  //	printf("Loaded trs = %g %g %g\n",trs[0],trs[1],trs[2]);
+	  printf("Loaded observatory coordinates (x,y,z) = %g %g %g (telescope %s)\n",trs[0],trs[1],trs[2],tel);
 	  sdhdf_ITRF_to_GRS80(trs[0],trs[1],trs[2],&long_grs80,&lat_grs80,&height_grs80);
 	  
 	  zenith[0] = height_grs80 * cos(long_grs80) * cos(lat_grs80);

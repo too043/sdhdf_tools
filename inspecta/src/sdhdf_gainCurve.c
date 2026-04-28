@@ -123,7 +123,7 @@ int main(int argc,char *argv[])
 	  //	  px1[j][npts[j]] = i;
 
 	  if (mjd0 < 0)
-	    mjd0 = inFile->beam[ibeam].bandData[j].cal_obsHeader[0].mjd;
+	    mjd0 = (inFile->beam[ibeam].bandData[j].cal_obsHeader[0].mjd + inFile->beam[ibeam].bandData[j].cal_obsHeader[0].fractional_mjd);
 
 	  if (xplot==1)
 	    px1[j][npts[j]] = (inFile->beam[ibeam].bandData[j].cal_obsHeader[0].mjd - mjd0)*86400.0/60.0/60.0; // FIX ME: Choose centre of dump 

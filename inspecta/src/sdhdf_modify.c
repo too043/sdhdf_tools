@@ -62,7 +62,7 @@ typedef struct dataStruct {
   // Data ordering = dump,pol,channel
   float *data;
   float *data2; // For noise source
-  float *freq; 
+  double *freq; 
   int nFreqDump;
   float *wt;
   unsigned char *flag;
@@ -312,12 +312,12 @@ void processFile(char *fname,char *oname, commandStruct *commands, int nCommands
 	      if (verbose==1) printf("Copying memory\n");
 	      for (i=0;i<in->nFreqDump;i++)
 		{
-		  memcpy(in->freq+i*in->nchan,inFile->beam[b].bandData[ii].astro_data.freq+i*in->nchan,sizeof(float)*in->nchan);
+		  memcpy(in->freq+i*in->nchan,inFile->beam[b].bandData[ii].astro_data.freq+i*in->nchan,sizeof(double)*in->nchan);
 		}
 	      if (verbose==1) printf("Complete memory\n");
 	    }
 	  else
-	    memcpy(in->freq,inFile->beam[b].bandData[ii].cal_on_data.freq,sizeof(float)*in->nchan);
+	    memcpy(in->freq,inFile->beam[b].bandData[ii].cal_on_data.freq,sizeof(double)*in->nchan);
 	  if (verbose==1) printf("Copying observation parameters\n");
 	  for (i=0;i<in->ndump;i++)
 	    {
@@ -493,7 +493,7 @@ void timeAverage(dataStruct *in,dataStruct *out,int ndumpAv,int sum)
   //  printf("A %d %d %d %d\n",out->nchan,out->npol,out->ndump,out->nchan*out->npol*out->ndump);
   //  printf("npol here = %d\n",out->npol);
 
-  memcpy(out->freq,in->freq,sizeof(float)*out->nchan*out->nFreqDump);
+  memcpy(out->freq,in->freq,sizeof(double)*out->nchan*out->nFreqDump);
   for (p=0;p<out->npol;p++)
     {
       for (j=0;j<out->nchan;j++)
@@ -524,7 +524,7 @@ void timeAverage(dataStruct *in,dataStruct *out,int ndumpAv,int sum)
 		      dtime     += in->obsParams[(k*avDump)+kk].dtime;
 		      raDeg     += in->obsParams[(k*avDump)+kk].raDeg;
 		      decDeg    += in->obsParams[(k*avDump)+kk].decDeg;
-		      mjd       += in->obsParams[(k*avDump)+kk].mjd;
+		      mjd       += (in->obsParams[(k*avDump)+kk].mjd + in->obsParams[(k*avDump)+kk].fractional_mjd);
 		      timeElapsed += in->obsParams[(k*avDump)+kk].timeElapsed; 
 		      raOffset += in->obsParams[(k*avDump)+kk].raOffset;
 		      decOffset += in->obsParams[(k*avDump)+kk].decOffset;
@@ -823,7 +823,7 @@ void changeFrequencyAxis(dataStruct *in,dataStruct *out,int bary_lsr,int regrid,
       if (mjdSet > 0)
 	mjdVals[i] = mjdSet;
       else
-	mjdVals[i] = in->obsParams[i].mjd;
+	mjdVals[i] = (in->obsParams[i].mjd + in->obsParams[i].fractional_mjd);
       raDeg[i] = in->obsParams[i].raDeg;
       decDeg[i] = in->obsParams[i].decDeg;
   }
@@ -833,14 +833,16 @@ void changeFrequencyAxis(dataStruct *in,dataStruct *out,int bary_lsr,int regrid,
 
   
   //  printf("WARNING: HAVE A TEST HACK IN PLACE\n");
-  //    printf("RESETTING: %d %d\n",out->ndump,out->nchan);
-    /*  for (i=0;i<out->ndump;i++)
+  //  printf("RESETTING: %d %d\n",out->ndump,out->nchan);
+  /*  for (i=0;i<out->ndump;i++)
     {
       for (j=0;j<out->nchan;j++)
-	{
-	  in->freq[i*out->nchan+j] = (float)((long double)j*274.3518519e-6 -7.5445833334L/1000.0L);
-	  in->freq[i*out->nchan+j] += 1662.000000L;
-	  if (j < 2) printf("HAVE: %.6f\n",in->freq[i*out->nchan+j]);
+      {
+	//	in->freq[i*out->nchan+j] = (float)((long double)j*274.3518519e-6 -7.5445833334L/1000.0L);
+	in->freq[i*out->nchan+j] = (double)((long double)j*274.34842250e-6L);
+	//	in->freq[i*out->nchan+j] += 1662.000000L;
+	in->freq[i*out->nchan+j] += 1660.000000L;
+	  if (j < 5) printf("HAVE: %.6f\n",in->freq[i*out->nchan+j]);
 	}
 	} */
   //    printf("******************\n");
@@ -851,17 +853,11 @@ void changeFrequencyAxis(dataStruct *in,dataStruct *out,int bary_lsr,int regrid,
 	printf("velocity correction: mjd = %.6f idump = %d vOverC = %.8f ra/dec = %g/%g\n",mjdVals[i],i,vOverC[i],raDeg[i],decDeg[i]);
       if (regrid == 1) // (note 2 = regrid, 1 = don't regrid)
 	{
-	  //
-	  //	  printf("STARTING\n");
 	  for (j=0;j<out->nchan;j++)
 	    {
-	      //  newFreq = (in->freq[i*out->nchan+j]-7.5445833334/1000.0)*(1.0-vOverC[i]);
-	      //	      newFreq = (in->freq[i*out->nchan+j]-3.2/1000.0)*(1.0-vOverC[i]);
 	      newFreq = (double)in->freq[i*out->nchan+j]*(1.0L-vOverC[i]);
-	      //	      printf("newFreq = %.6f %.6f %.6f %.6f\n",in->freq[i*out->nchan+j],newFreq,in->freq[i*out->nchan+j]-newFreq,in->freq[1] - in->freq[0]);
 	      out->freq[i*out->nchan+j] = (double)newFreq;	     
 	    }
-	  //	  printf("LEFT LOOP\n");
 	}
       else
 	{
@@ -963,7 +959,7 @@ void allocateMemory(dataStruct *in)
 	}
       if (in->astroCal==1)
 	  in->data2 = (float *)malloc(sizeof(float)*in->nchan*in->ndump*in->npol);
-      in->freq = (float *)malloc(sizeof(float)*in->nchan*in->nFreqDump);
+      in->freq = (double *)malloc(sizeof(double)*in->nchan*in->nFreqDump);
       in->wt   = (float *)malloc(sizeof(float)*in->nchan*in->ndump);
       in->flag = (unsigned char *)malloc(sizeof(unsigned char)*in->nchan*in->ndump);
       in->obsParams = (sdhdf_obsParamsStruct *)malloc(sizeof(sdhdf_obsParamsStruct)*in->ndump);      
@@ -975,7 +971,7 @@ void allocateMemory(dataStruct *in)
       if (in->astroCal==1)
 	  in->data2 = (float *)realloc(in->data2,sizeof(float)*in->nchan*in->ndump*in->npol);
 
-      in->freq = (float *)realloc(in->freq,sizeof(float)*in->nchan*in->nFreqDump);
+      in->freq = (double *)realloc(in->freq,sizeof(double)*in->nchan*in->nFreqDump);
       //      in->freq = (float *)realloc(in->freq,sizeof(float)*in->nchan);
       in->wt = (float *)realloc(in->wt,sizeof(float)*in->nchan*in->ndump);
       in->flag = (unsigned char *)realloc(in->flag,sizeof(unsigned char)*in->nchan*in->ndump);
@@ -1003,7 +999,7 @@ void polarisationAverage(dataStruct *in,dataStruct *out,int sum)
   allocateMemory(out);
   
   memcpy(out->obsParams,in->obsParams,sizeof(sdhdf_obsParamsStruct)*in->ndump); 
-  memcpy(out->freq,in->freq,sizeof(float)*out->nchan*out->nFreqDump);
+  memcpy(out->freq,in->freq,sizeof(double)*out->nchan*out->nFreqDump);
   for (j=0;j<out->nchan;j++)
     {
       for (k=0;k<out->ndump;k++)
@@ -1045,7 +1041,7 @@ void scaleValues(dataStruct *in,dataStruct *out,int iband, int useBand, int mult
   allocateMemory(out);
   
   memcpy(out->obsParams,in->obsParams,sizeof(sdhdf_obsParamsStruct)*in->ndump); 
-  memcpy(out->freq,in->freq,sizeof(float)*out->nchan*out->nFreqDump);
+  memcpy(out->freq,in->freq,sizeof(double)*out->nchan*out->nFreqDump);
   if (useBand != iband)
     memcpy(out->data,in->data,sizeof(float)*out->nchan*out->ndump*out->npol);
   else

@@ -133,10 +133,12 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
   sdhdf_fileStruct *inFile,*outFile;
   int nbeam,npol,nchan,ndump,nchanFreq,load_nchanCal;
   int use_nchanCal;
-  float *load_calFreq,*load_calAA,*load_calBB,*load_calRe,*load_calIm;
+  float *load_calFreq;
+  float *load_calAA,*load_calBB,*load_calRe,*load_calIm;
   float **interpCoeff_AA,**interpCoeff_BB,**interpCoeff_Re,**interpCoeff_Im;
   float **interpCoeff_fluxCalAA,**interpCoeff_fluxCalBB;
-  float *out_data,*out_freq;
+  float *out_data;
+  double *out_freq;
   double fitParams_aa[2],fitParams_bb[2],fitParams_re[2],fitParams_im[2];
   double fitParams_flux_aa[2],fitParams_flux_bb[2];
   double *fitX;
@@ -150,14 +152,15 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
   float stabilised_aa,stabilised_bb,stabilised_rab,stabilised_iab;
   float cal_aa,cal_bb,cal_rab,cal_iab;
   float measured_aa,measured_bb,measured_rab,measured_iab;
-  float freq;
+  double freq;
   sdhdf_attributes_struct dataAttributes[MAX_ATTRIBUTES];
   sdhdf_attributes_struct freqAttributes[MAX_ATTRIBUTES];
   int nDataAttributes=0;
   int nFreqAttributes=0;
   int nFluxCalChan=0;
   double stabilise_normFactor;
-  float *fluxCalFreq,*fluxCalValAA,*fluxCalValBB;
+  float *fluxCalFreq;
+  float *fluxCalValAA,*fluxCalValBB;
   float fluxValAA,fluxValBB;
   float meanFluxValAA,meanFluxValBB;
   int meanFluxValN;
@@ -206,7 +209,7 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
   fluxCal = (sdhdf_fluxCalibration *)malloc(sizeof(sdhdf_fluxCalibration)*MAX_POL_CAL_CHAN); //  Should change to MAX_FLUXCAL OR SIMILAR ** FIX ME
   sdhdf_getTelescopeDirName(inFile->primary[0].telescope,obsDir);
   if (tcal==0)
-    sdhdf_loadFluxCal(fluxCal,&nFluxCalChan,obsDir,inFile->primary[0].rcvr,fluxCalFile,(float)inFile->beam[0].bandData[0].astro_obsHeader[0].mjd); 
+    sdhdf_loadFluxCal(fluxCal,&nFluxCalChan,obsDir,inFile->primary[0].rcvr,fluxCalFile,(float)(inFile->beam[0].bandData[0].astro_obsHeader[0].mjd + inFile->beam[0].bandData[0].astro_obsHeader[0].fractional_mjd)); 
   else
     sdhdf_loadTcal(fluxCal,&nFluxCalChan,obsDir,inFile->primary[0].rcvr,"tcal_noflag.dat");  // Note this is a text file -- FIX ME -- should make consistent with fluxcal
   
@@ -223,7 +226,7 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
     }
   interpCoeff_fluxCalAA = (float **)malloc(sizeof(float *)*nFluxCalChan);
   interpCoeff_fluxCalBB = (float **)malloc(sizeof(float *)*nFluxCalChan);
-  fluxCalFreq = (float *)malloc(sizeof(float)*nFluxCalChan);
+  fluxCalFreq = (float *)malloc(sizeof(float)*nFluxCalChan); // This is a float not a double because of TKcmonot
   fluxCalValAA = (float *)malloc(sizeof(float)*nFluxCalChan);
   fluxCalValBB = (float *)malloc(sizeof(float)*nFluxCalChan);
   
@@ -397,7 +400,7 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 		//
 	    }
 
-	  out_freq  = (float *)malloc(sizeof(float)*nchan*nchanFreq);
+	  out_freq  = (double *)malloc(sizeof(double)*nchan*nchanFreq);
 	  out_data  = (float *)calloc(sizeof(float),nchan*npol*ndump);
 	  	  
 	  for (k=0;k<inFile->beam[b].bandHeader[j].ndump;k++)

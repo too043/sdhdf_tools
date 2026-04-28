@@ -261,7 +261,7 @@ int main(int argc,char *argv[])
 		      for (j=0;j<inFile->beam[beam].bandData[iband].nAstro_obsHeader;j++)
 			{
 			  printf(" [SDUMP] %12.3f %.7f %-11.11s %-11.11s %-11.11s %-11.11s %7.5f %7.5f %7.5f %7.5f %7.5f %7.5f %7.5f %s %d %d\n",
-				 inFile->beam[beam].bandData[iband].astro_obsHeader[j].timeElapsed,inFile->beam[beam].bandData[iband].astro_obsHeader[j].mjd,
+				 inFile->beam[beam].bandData[iband].astro_obsHeader[j].timeElapsed,(inFile->beam[beam].bandData[iband].astro_obsHeader[j].mjd+inFile->beam[beam].bandData[iband].astro_obsHeader[j].fractional_mjd),
 				 inFile->beam[beam].bandData[iband].astro_obsHeader[j].utc,inFile->beam[beam].bandData[iband].astro_obsHeader[j].local_time,
 				 inFile->beam[beam].bandData[iband].astro_obsHeader[j].raStr,inFile->beam[beam].bandData[iband].astro_obsHeader[j].decStr,
 				 inFile->beam[beam].bandData[iband].astro_obsHeader[j].raDeg,inFile->beam[beam].bandData[iband].astro_obsHeader[j].decDeg,
@@ -292,7 +292,7 @@ int main(int argc,char *argv[])
 		      for (j=0;j<inFile->beam[beam].bandData[iband].nCal_obsHeader;j++)
 			{
 			  printf(" [SDUMP] %12.3f %.7f %-11.11s %-11.11s %-11.11s %-11.11s %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f\n",
-				 inFile->beam[beam].bandData[iband].cal_obsHeader[j].timeElapsed,inFile->beam[beam].bandData[iband].cal_obsHeader[j].mjd,
+				 inFile->beam[beam].bandData[iband].cal_obsHeader[j].timeElapsed,(inFile->beam[beam].bandData[iband].cal_obsHeader[j].mjd+inFile->beam[beam].bandData[iband].cal_obsHeader[j].fractional_mjd),
 				 inFile->beam[beam].bandData[iband].cal_obsHeader[j].utc,inFile->beam[beam].bandData[iband].cal_obsHeader[j].local_time,
 				 inFile->beam[beam].bandData[iband].cal_obsHeader[j].raStr,inFile->beam[beam].bandData[iband].cal_obsHeader[j].decStr,
 				 inFile->beam[beam].bandData[iband].cal_obsHeader[j].raDeg,inFile->beam[beam].bandData[iband].cal_obsHeader[j].decDeg,

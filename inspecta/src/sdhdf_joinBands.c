@@ -59,7 +59,8 @@ int main(int argc,char *argv[])
   int nFreqDumps;
   int dumpPos,freqPos,dataPos;
   int nOutBands;
-  float *out_data,*out_freq,*out_wts;
+  float *out_data,*out_wts;
+  double *out_freq;
   unsigned char *out_flags;
   int haveWeights,haveFlags=0;
   
@@ -132,7 +133,7 @@ int main(int argc,char *argv[])
 	  //
 	  outBandParams[i].ndump = nDumpOut; // FIX ME: SHOULD CHECK ALL THE DUMP TIMES ARE THE SAME
 	  out_data = (float *)malloc(sizeof(float)*nDumpOut*inFile0->beam[b].bandHeader[i].nchan * inFile0->beam[b].bandHeader[i].npol);
-	  out_freq = (float *)malloc(sizeof(float)*nDumpOut*inFile0->beam[b].bandHeader[i].nchan);
+	  out_freq = (double *)malloc(sizeof(double)*nDumpOut*inFile0->beam[b].bandHeader[i].nchan);
 	  out_wts = (float *)malloc(sizeof(float)*nDumpOut*inFile0->beam[b].bandHeader[i].nchan);
 	  out_flags = (unsigned char *)malloc(sizeof(unsigned char)*nDumpOut*inFile0->beam[b].bandHeader[i].nchan);
 	  
@@ -155,7 +156,7 @@ int main(int argc,char *argv[])
 		  if (nFreqDumps == 1)
 		    {
 		      for (j=0;j<ndump;j++) // Make multiple copies
-			memcpy(out_freq+freqPos+j*inFile->beam[b].bandHeader[i].nchan,out_freq+freqPos,sizeof(float)*inFile->beam[b].bandHeader[i].nchan);
+			memcpy(out_freq+freqPos+j*inFile->beam[b].bandHeader[i].nchan,out_freq+freqPos,sizeof(double)*inFile->beam[b].bandHeader[i].nchan);
 		    }
 		  else
 		    {printf("ERROR: Not sure what to do\n"); exit(1);}

@@ -208,7 +208,7 @@ int main(int argc,char *argv[])
 	    sdev1 = sqrt(1.0/(double)np * sx_2 - pow(1.0/(double)np * sx,2));
 	    sdev2 = sqrt(1.0/(double)np * sx2_2 - pow(1.0/(double)np * sx2,2));
 	    
-	    printf("[stats] %s %s %d %g %g %g %g %g %g %g %g %.5f\n",inFile->fname,inFile->beamHeader[0].source,l,mean1,mean2,sdev1,sdev2,min1,max1,min2,max2,inFile->beam[0].bandData[j].astro_obsHeader[l].mjd);	  
+	    printf("[stats] %s %s %d %g %g %g %g %g %g %g %g %.5f\n",inFile->fname,inFile->beamHeader[0].source,l,mean1,mean2,sdev1,sdev2,min1,max1,min2,max2,inFile->beam[0].bandData[j].astro_obsHeader[l].mjd+inFile->beam[0].bandData[j].astro_obsHeader[l].fractional_mjd);	  
 	    if (scaleRMS == 1)
 	      {
 		float calcVals1[nc],calcVals2[nc];

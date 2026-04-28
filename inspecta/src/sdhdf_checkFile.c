@@ -213,7 +213,7 @@ void checkLog(sdhdf_fileStruct *inFile)
 
   for (i=0;i<nLog;i++)
     {
-      mjd = inFile->beam[ibeam].bandData[iband].astro_obsHeader[0].mjd; // NOTE 0 HERE
+      mjd = inFile->beam[ibeam].bandData[iband].astro_obsHeader[0].mjd + inFile->beam[ibeam].bandData[iband].astro_obsHeader[0].fractional_mjd; // NOTE 0 HERE
       if (mjd >= historyLog[i].mjdStart && mjd  <= historyLog[i].mjdEnd)
 	{
 	  printf("         WARNING: %s ",historyLog[i].report);

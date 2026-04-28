@@ -978,6 +978,7 @@ void sdhdf_loadObsHeader(sdhdf_fileStruct *inFile,int type)
 		  H5Tinsert(val_tid,"INTEGRATION_TIME",HOFFSET(sdhdf_obsParamsStruct,dtime),H5T_NATIVE_DOUBLE);
 		  //		  H5Tinsert(val_tid,"TIME_DB",HOFFSET(sdhdf_obsParamsStruct,timedb),stid);
 		  H5Tinsert(val_tid,"MJD",HOFFSET(sdhdf_obsParamsStruct,mjd),H5T_NATIVE_DOUBLE);
+		  H5Tinsert(val_tid,"FRACTIONAL_MJD",HOFFSET(sdhdf_obsParamsStruct,fractional_mjd),H5T_NATIVE_DOUBLE);
 		  H5Tinsert(val_tid,"UTC",HOFFSET(sdhdf_obsParamsStruct,utc),stid);
 		  //		  H5Tinsert(val_tid,"UT_DATE",HOFFSET(sdhdf_obsParamsStruct,ut_date),stid);
 		  H5Tinsert(val_tid,"LOCAL_TIME",HOFFSET(sdhdf_obsParamsStruct,local_time),stid);
@@ -1008,6 +1009,7 @@ void sdhdf_loadObsHeader(sdhdf_fileStruct *inFile,int type)
 		  H5Tinsert(val_tid,"DUMP_TIME",HOFFSET(sdhdf_obsParamsStruct,dtime),H5T_NATIVE_DOUBLE);
 		  H5Tinsert(val_tid,"TIME_DB",HOFFSET(sdhdf_obsParamsStruct,timedb),stid);
 		  H5Tinsert(val_tid,"MJD",HOFFSET(sdhdf_obsParamsStruct,mjd),H5T_NATIVE_DOUBLE);
+		  H5Tinsert(val_tid,"FRACTIONAL_MJD",HOFFSET(sdhdf_obsParamsStruct,fractional_mjd),H5T_NATIVE_DOUBLE);
 		  H5Tinsert(val_tid,"UTC",HOFFSET(sdhdf_obsParamsStruct,utc),stid);
 		  H5Tinsert(val_tid,"UT_DATE",HOFFSET(sdhdf_obsParamsStruct,ut_date),stid);
 		  H5Tinsert(val_tid,"LOCAL_TIME",HOFFSET(sdhdf_obsParamsStruct,local_time),stid);
@@ -1097,6 +1099,7 @@ void sdhdf_initialise_obsHeader(sdhdf_obsParamsStruct *obs)
   obs->dtime = -1;
   strcpy(obs->timedb,"unset");
   obs->mjd = -1;
+  obs->fractional_mjd = 0;
   strcpy(obs->utc,"unset");
   strcpy(obs->ut_date,"unset");
   strcpy(obs->local_time,"unset");
@@ -1515,6 +1518,7 @@ void sdhdf_writeObsParams(sdhdf_fileStruct *outFile,char *bandLabel,char *beamLa
       H5Tinsert(datatype_id,"ELAPSED_TIME",HOFFSET(sdhdf_obsParamsStruct,timeElapsed),H5T_NATIVE_DOUBLE);
       H5Tinsert(datatype_id,"INTEGRATION_TIME",HOFFSET(sdhdf_obsParamsStruct,dtime),H5T_NATIVE_DOUBLE);
       H5Tinsert(datatype_id,"MJD",HOFFSET(sdhdf_obsParamsStruct,mjd),H5T_NATIVE_DOUBLE);
+      H5Tinsert(datatype_id,"FRACTIONAL_MJD",HOFFSET(sdhdf_obsParamsStruct,fractional_mjd),H5T_NATIVE_DOUBLE);
       H5Tinsert(datatype_id,"UTC",HOFFSET(sdhdf_obsParamsStruct,utc),stid);
       H5Tinsert(datatype_id,"LOCAL_TIME",HOFFSET(sdhdf_obsParamsStruct,local_time),stid);
       H5Tinsert(datatype_id,"RIGHT_ASCENSION",HOFFSET(sdhdf_obsParamsStruct,raStr),stid);
@@ -1538,6 +1542,7 @@ void sdhdf_writeObsParams(sdhdf_fileStruct *outFile,char *bandLabel,char *beamLa
       H5Tinsert(datatype_id,"DUMP_TIME",HOFFSET(sdhdf_obsParamsStruct,dtime),H5T_NATIVE_DOUBLE);
       H5Tinsert(datatype_id,"TIME_DB",HOFFSET(sdhdf_obsParamsStruct,timedb),stid);
       H5Tinsert(datatype_id,"MJD",HOFFSET(sdhdf_obsParamsStruct,mjd),H5T_NATIVE_DOUBLE);
+      H5Tinsert(datatype_id,"FRACTIONAL_MJD",HOFFSET(sdhdf_obsParamsStruct,fractional_mjd),H5T_NATIVE_DOUBLE);
       H5Tinsert(datatype_id,"UTC",HOFFSET(sdhdf_obsParamsStruct,utc),stid);
       H5Tinsert(datatype_id,"UT_DATE",HOFFSET(sdhdf_obsParamsStruct,ut_date),stid);
       H5Tinsert(datatype_id,"LOCAL_TIME",HOFFSET(sdhdf_obsParamsStruct,local_time),stid);
@@ -1590,9 +1595,10 @@ void sdhdf_writeObsParams(sdhdf_fileStruct *outFile,char *bandLabel,char *beamLa
   else if (type==2)
     {
       if (strcmp(ver,"4.0")==0)
-	sprintf(name,"%s/%s/metadata/calibration_observation_parameters",beamLabel,bandLabel);
+	sprintf(name,"%s/%s/metadata/calibrator_observation_parameters",beamLabel,bandLabel);
       else
 	sprintf(name,"%s/%s/metadata/cal_obs_params",beamLabel,bandLabel);
+      printf("Writing calibrator observation parameters %s\n",name);
     }
       dset_id = H5Dcreate2(outFile->fileID,name,datatype_id,dataspace_id,H5P_DEFAULT,H5P_DEFAULT,H5P_DEFAULT);
   status  = H5Dwrite(dset_id,datatype_id,H5S_ALL,H5S_ALL,H5P_DEFAULT,obsParams);
@@ -1610,6 +1616,7 @@ void sdhdf_copySingleObsParams(sdhdf_fileStruct *inFile,int ibeam,int iband,int 
   obsParam->dtime = inFile->beam[ibeam].bandData[iband].astro_obsHeader[idump].dtime;
   strcpy(obsParam->timedb,inFile->beam[ibeam].bandData[iband].astro_obsHeader[idump].timedb);
   obsParam->mjd = inFile->beam[ibeam].bandData[iband].astro_obsHeader[idump].mjd;
+  obsParam->fractional_mjd = inFile->beam[ibeam].bandData[iband].astro_obsHeader[idump].fractional_mjd;
   strcpy(obsParam->utc,inFile->beam[ibeam].bandData[iband].astro_obsHeader[idump].utc);
   strcpy(obsParam->ut_date,inFile->beam[ibeam].bandData[iband].astro_obsHeader[idump].ut_date);
   strcpy(obsParam->local_time,inFile->beam[ibeam].bandData[iband].astro_obsHeader[idump].local_time);
@@ -1638,6 +1645,7 @@ void sdhdf_copySingleObsParamsCal(sdhdf_fileStruct *inFile,int ibeam,int iband,i
   obsParam->dtime = inFile->beam[ibeam].bandData[iband].cal_obsHeader[idump].dtime;
   strcpy(obsParam->timedb,inFile->beam[ibeam].bandData[iband].cal_obsHeader[idump].timedb);
   obsParam->mjd = inFile->beam[ibeam].bandData[iband].cal_obsHeader[idump].mjd;
+  obsParam->fractional_mjd = inFile->beam[ibeam].bandData[iband].cal_obsHeader[idump].fractional_mjd;
   strcpy(obsParam->utc,inFile->beam[ibeam].bandData[iband].cal_obsHeader[idump].utc);
   strcpy(obsParam->ut_date,inFile->beam[ibeam].bandData[iband].cal_obsHeader[idump].ut_date);
   strcpy(obsParam->local_time,inFile->beam[ibeam].bandData[iband].cal_obsHeader[idump].local_time);

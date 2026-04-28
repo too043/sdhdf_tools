@@ -124,6 +124,7 @@ bin_PROGRAMS += sdhdf_primaryFluxCal \
   sdhdf_calProc \
   sdhdf_quicklook \
   sdhdf_processBWS \
+  sdhdf_fitBaseline \
   sdhdf_statistics \
   sdhdf_pointing \
   sdhdf_autoFlag \
@@ -178,6 +179,9 @@ sdhdf_quicklook_SOURCES = sdhdf_quicklook.c \
   $(COMMON_SRCS)
 
 sdhdf_processBWS_SOURCES = sdhdf_processBWS.c \
+  $(COMMON_SRCS)
+
+sdhdf_fitBaseline_SOURCES = sdhdf_fitBaseline.c \
   $(COMMON_SRCS)
 
 sdhdf_statistics_SOURCES = sdhdf_statistics.c \

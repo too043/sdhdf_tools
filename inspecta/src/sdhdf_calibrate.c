@@ -33,12 +33,13 @@
 #include <math.h>
 #include "inspecta.h"
 #include "TKfit.h"
+#include "sdhdf_opacity.h"
 
 #define VNUM "v2.0"
 #define VERSION "v0.5"
 #define MAX_POL_CAL_CHAN 4096    // FIX ME -- SHOULD SET DYNAMICALLY
 
-void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *fluxCalFile, int fluxCalMethod,int polCalMethod,int tcal,int verbose,char *args,double tdumpAstro,int setTdumpAstro,double tdumpCal,int nchanAstro,int setNchanAstro,int normCal,int normAstro);
+void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *fluxCalFile, int fluxCalMethod,int polCalMethod,int tcal,int verbose,char *args,double tdumpAstro,int setTdumpAstro,double tdumpCal,int nchanAstro,int setNchanAstro,int normCal,int normAstro,int applyOpacity);
 
 void help()
 {
@@ -50,6 +51,10 @@ void help()
   printf("\nCommand line arguments:\n\n");
   printf("-h                This help\n");
   printf("-e <ext>          Output file extension\n");
+  printf("-opacity          Apply ITU-R P.676 atmospheric opacity correction using\n");
+  printf("                  ground weather recorded in the file (skipped with a\n");
+  printf("                  warning where weather data is unavailable, e.g. older\n");
+  printf("                  SDHDF files)\n");
 
   printf("\nExample:\n\n");
   printf("sdhdf_calibrate -e cal uwl_*.hdf.T.f1024\n\n");
@@ -79,6 +84,7 @@ int main(int argc,char *argv[])
   int setNchanAstro=0;
   int normCal=0;
   int normAstro=0;
+  int applyOpacity=0;
   strcpy(extension,"calibrate");
 
   sdhdf_storeArguments(args,MAX_ARGLEN,argc,argv);
@@ -99,6 +105,8 @@ int main(int argc,char *argv[])
 	  normCal=1;
 	  normAstro=1;
 	}
+      else if (strcmp(argv[i],"-opacity")==0)
+	applyOpacity=1;
       else if (strcmp(argv[i],"-V")==0)
 	verbose=2;    
       else if (strcmp(argv[i],"-e")==0)
@@ -123,11 +131,11 @@ int main(int argc,char *argv[])
     {
       printf("Processing file: %s\n",fname[i]);
       sdhdf_formOutputFilename(fname[i],extension,oname);
-      processFile(fname[i],oname,stabiliseType,out_npol,fluxCalFile,fluxCalMethod,polCalMethod,tcal,verbose,args,tdumpAstro,setTdumpAstro,tdumpCal,nchanAstro,setNchanAstro,normCal,normAstro);
+      processFile(fname[i],oname,stabiliseType,out_npol,fluxCalFile,fluxCalMethod,polCalMethod,tcal,verbose,args,tdumpAstro,setTdumpAstro,tdumpCal,nchanAstro,setNchanAstro,normCal,normAstro,applyOpacity);
     }
 
 }
-void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *fluxCalFile, int fluxCalMethod,int polCalMethod,int tcal,int verbose,char *args,double tdumpAstro,int setTdumpAstro,double tdumpCal,int nchanAstro,int setNchanAstro,int normCal,int normAstro)
+void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *fluxCalFile, int fluxCalMethod,int polCalMethod,int tcal,int verbose,char *args,double tdumpAstro,int setTdumpAstro,double tdumpCal,int nchanAstro,int setNchanAstro,int normCal,int normAstro,int applyOpacity)
 {
   int ii,i,c,j,k,b;
   sdhdf_fileStruct *inFile,*outFile;
@@ -405,7 +413,34 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 	  	  
 	  for (k=0;k<inFile->beam[b].bandHeader[j].ndump;k++)
 	    {
-	      
+	      double opacityCorrection = 1.0;
+
+	      if (applyOpacity==1)
+		{
+		  double elDeg    = inFile->beam[b].bandData[j].astro_obsHeader[k].el;
+		  double tempC    = inFile->beam[b].bandData[j].astro_obsHeader[k].temperature;
+		  double pressHpa = inFile->beam[b].bandData[j].astro_obsHeader[k].pressure;
+		  double humidPct = inFile->beam[b].bandData[j].astro_obsHeader[k].relHumidity;
+
+		  // In practice weather is often only recorded against calibration-scan
+		  // dumps, not every astro dump (confirmed against real UWL data) --
+		  // fall back to the cal scan's weather, which changes slowly enough
+		  // over a scan to still be representative. Elevation still comes from
+		  // the astro dump itself, since that tracks the actual pointing.
+		  if ((tempC==-1 || pressHpa==-1 || humidPct==-1) && inFile->beam[b].bandData[j].nCal_obsHeader>0)
+		    {
+		      tempC    = inFile->beam[b].bandData[j].cal_obsHeader[0].temperature;
+		      pressHpa = inFile->beam[b].bandData[j].cal_obsHeader[0].pressure;
+		      humidPct = inFile->beam[b].bandData[j].cal_obsHeader[0].relHumidity;
+		    }
+
+		  // -1 = field not available anywhere for this band (e.g. older SDHDF
+		  // file without weather data); sdhdfProc_metadata.c already warned
+		  // once per band when loading, so just silently skip here.
+		  if (tempC != -1 && pressHpa != -1 && humidPct != -1 && elDeg > 0)
+		    opacityCorrection = sdhdf_opacity_correctionFactor(inFile->beam[b].bandHeader[j].fc,elDeg,tempC,pressHpa,humidPct);
+		}
+
 	      for (ii=0;ii<nchan;ii++)
 		{
 		  freq = inFile->beam[b].bandData[j].astro_data.freq[k*nchan+ii];
@@ -491,7 +526,7 @@ void processFile(char *fname,char *oname, int stabiliseType,int out_npol,char *f
 		      fluxValAA = meanFluxValAA;
 		      fluxValBB = meanFluxValBB;
 		    }
-		  fluxScale = fluxValAA + fluxValBB;
+		  fluxScale = (fluxValAA + fluxValBB) * opacityCorrection;
 		  if (verbose==2)
 		    {
 		      fprintf(debugOut1,"%.6f %g %g %g %g %g %g\n",freq,fluxValAA,fluxValBB,cal_aa,cal_bb,cal_rab,cal_iab);

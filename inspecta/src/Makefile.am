@@ -66,6 +66,7 @@ sdhdf_modify_SOURCES = sdhdf_modify.c \
   $(COMMON_SRCS)
 
 sdhdf_calibrate_SOURCES = sdhdf_calibrate.c \
+  sdhdf_opacity.c \
   $(COMMON_SRCS)
 
 sdhdf_calibrateOld_SOURCES = sdhdf_calibrateOld.c \

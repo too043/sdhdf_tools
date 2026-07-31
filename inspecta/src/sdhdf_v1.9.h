@@ -300,6 +300,9 @@ typedef struct sdhdf_obsParamsStruct {
   double paraAngle;
   double windDir;
   double windSpd;
+  double temperature;  // Ambient temperature (deg C). -1 = not available (older SDHDF files)
+  double pressure;     // Atmospheric pressure (hPa). -1 = not available (older SDHDF files)
+  double relHumidity;  // Relative humidity (%). -1 = not available (older SDHDF files)
 } sdhdf_obsParamsStruct;
 
 // ***********************************************

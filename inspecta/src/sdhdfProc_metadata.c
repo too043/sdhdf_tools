@@ -1031,7 +1031,30 @@ void sdhdf_loadObsHeader(sdhdf_fileStruct *inFile,int type)
 		  H5Tinsert(val_tid,"WIND_DIR",HOFFSET(sdhdf_obsParamsStruct,windDir),H5T_NATIVE_DOUBLE);
 		  H5Tinsert(val_tid,"WIND_SPD",HOFFSET(sdhdf_obsParamsStruct,windSpd),H5T_NATIVE_DOUBLE);
 		}
-	      
+
+	      // Weather (temperature/pressure/humidity) was added to SDHDF after
+	      // this obs_params/observation_parameters record was first defined,
+	      // so older files won't have these fields. H5Dread fails outright if
+	      // val_tid requests a field absent from the on-disk compound type
+	      // (headerT), so check per-field existence first and warn instead.
+	      {
+		int isV4 = (strcmp(inFile->primary[0].hdr_defn_version,"4.0")==0);
+		const char *humidField = isV4 ? "RELATIVE_HUMIDITY" : "REL_HUMIDITY";
+		int haveTemp,havePress,haveHumid;
+
+		status = H5Eset_auto1(NULL,NULL);
+		haveTemp  = (H5Tget_member_index(headerT,"TEMPERATURE") >= 0);
+		havePress = (H5Tget_member_index(headerT,"PRESSURE") >= 0);
+		haveHumid = (H5Tget_member_index(headerT,humidField) >= 0);
+
+		if (haveTemp)  H5Tinsert(val_tid,"TEMPERATURE",HOFFSET(sdhdf_obsParamsStruct,temperature),H5T_NATIVE_DOUBLE);
+		if (havePress) H5Tinsert(val_tid,"PRESSURE",HOFFSET(sdhdf_obsParamsStruct,pressure),H5T_NATIVE_DOUBLE);
+		if (haveHumid) H5Tinsert(val_tid,humidField,HOFFSET(sdhdf_obsParamsStruct,relHumidity),H5T_NATIVE_DOUBLE);
+
+		if (!(haveTemp && havePress && haveHumid))
+		  printf("WARNING: [%s] %s: weather data (temperature/pressure/humidity) not fully available -- this looks like an older SDHDF file that did not record it. Opacity correction will be skipped where affected.\n",inFile->fname,label);
+	      }
+
 	      if (type==1)
 		status  = H5Dread(header_id,val_tid,H5S_ALL,H5S_ALL,H5P_DEFAULT,inFile->beam[i].bandData[j].astro_obsHeader);
 	      else if (type==2)
@@ -1120,6 +1143,9 @@ void sdhdf_initialise_obsHeader(sdhdf_obsParamsStruct *obs)
   obs->paraAngle = -1;
   obs->windDir = -1;
   obs->windSpd = -1;
+  obs->temperature = -1;
+  obs->pressure = -1;
+  obs->relHumidity = -1;
 }
 
 void sdhdf_writeHistory(sdhdf_fileStruct *outFile,sdhdf_historyStruct *outParams,int n)

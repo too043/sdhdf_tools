@@ -72,7 +72,7 @@ int main(int argc,char *argv[])
   int verbose=0;
   int stabiliseType=1;
   int out_npol = 4;
-  char fluxCalFile[1024] = "uwl_220705_132107.fluxcal";
+  char fluxCalFile[1024] = "auto";
   int tcal=0; // Using Scal if 0, or Tcal = 1
   int fluxCalMethod = 1; // 0 = closest, 1 = spline, 2 = average
   int polCalMethod = 1;  // 0 = closest, 1 = spline, 2 = average
